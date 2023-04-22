@@ -1,0 +1,14 @@
+pattern = cat (<whitespace> <'.'> <whitespace> cat)*
+cat = token (<whitespace>? token)*
+<token> = word | number | repetition | group | alternation | slow-repetition | slow
+group = <#'\['> stack <#'\]'>
+repetition?
+alternation = <#'\<'> stack <#'\>'>
+repetition?
+repetition = token <'*'> number
+slow-repetition = token <'!'> number
+slow = token <'/'> number
+whitespace = #"\s+"
+word = #"[a-zA-Z]+"
+stack = pattern (<whitespace> <','> <whitespace> pattern)*
+number = #"[0-9]+"

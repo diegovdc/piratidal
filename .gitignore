@@ -1,0 +1,5 @@
+.lsp/
+.cpcache/
+.clj-kondo/
+.nrepl-port
+.cider-repl-history

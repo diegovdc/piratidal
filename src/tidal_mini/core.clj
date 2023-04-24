@@ -21,8 +21,6 @@
     (parse-tidal-pattern input))
   (let [input "bd {bd hh sn}%5"]
     (parse-tidal-pattern input))
-  (let [input "bd bd?0.5"]
-    (parse-tidal-pattern input))
   (let [input "bd [bd | sn]"]
     (parse-tidal-pattern input))
   (let [input "bd@2 bd"]
@@ -30,6 +28,8 @@
   (let [input "bd:2 bd"]
     (parse-tidal-pattern input))
   (let [input "bd(3, 8, 1)"]
+    (parse-tidal-pattern input))
+  (let [input "bd bd?0.5"]
     (parse-tidal-pattern input)))
 
 (do

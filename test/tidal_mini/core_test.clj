@@ -122,11 +122,13 @@
            (parse-tidal-pattern "bd {bd hh sn}%8!2"))))
   (testing "`:degrade` a?"
     (is (= [:pattern
-            [:cat [:word "bd"] [:word "bd" [:degrade]]]]
+            [:cat [:word "bd"] [:degrade [:word "bd"] [:op-degrade]]]]
            (parse-tidal-pattern "bd bd?"))))
   (testing "`:degrade` with amount a?0.1"
     (is (= [:pattern
-            [:cat [:word "bd"] [:word "bd" [:degrade [:float "0.1"]]]]]
+            [:cat
+             [:word "bd"]
+             [:degrade [:word "bd"] [:op-degrade [:float "0.1"]]]]]
            (parse-tidal-pattern "bd bd?0.1"))))
   (testing "`:op-elongate`"
     (is (= [:pattern
@@ -175,16 +177,17 @@
             [:cat
              [:word "a"]
              [:silence "~"]
-             [:fast [:word "b"] [:int "2"]]
+             [:fast [:word "b"] [:op-fast [:int "2"]]]
              [:group
               [:stack
-               [:pattern [:cat [:fast [:word "c"] [:int "2"]] [:word "c"]]]]]
+               [:pattern
+                [:cat [:fast [:word "c"] [:op-fast [:int "2"]]] [:word "c"]]]]]
              [:alt [:stack [:pattern [:cat [:word "d"] [:word "e"]]]]]]
             [:cat
              [:replicate
               [:alt [:stack [:pattern [:cat [:word "a"] [:word "b"]]]]]
               [:op-replicate [:int "2"]]]
-             [:slow [:word "a"] [:int "2"]]
+             [:slow [:word "a"] [:op-slow [:int "2"]]]
              [:group
               [:stack
                [:pattern [:cat [:word "a"]]]

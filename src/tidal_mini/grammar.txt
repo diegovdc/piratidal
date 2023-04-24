@@ -1,11 +1,25 @@
-pattern = cat (<ws> <'.'> <ws> cat)*
+(* Basic types *)
+ws = #"\s+"
+word = #"[a-zA-Z]+"
+int = #"[0-9]+"
+float = #"[+-]?([0-9]*[.])?[0-9]+"
+silence = "~"
+<token> = word | sample | int | silence | fast | group | alt | slow | polymeter | elongate | replicate | euclidean | choose | degrade
+
+(* Pattern *)
 cat = token (<ws>? token)*
-<token> = word | sample | int | silence | fast | group | alt | slow | polymeter | elongate | replicate | euclidean | choose
+pattern = cat (<ws> <'.'> <ws> cat)*
+
+(* Pattern structures *)
+stack = pattern (<ws> <','> <ws> pattern)*
 group = <#'\['> stack <#'\]'>
+alt = <#'\<'> stack <#'\>'>
 polymeter = <#'\{'> stack <#'\}'> polymeter-steps?
 polymeter-steps = <'%'> int
 op-choose = <ws '|' ws>
 choose = <#'\['> stack (<op-choose> stack)+ <#'\]'>
+
+(* Pattern Operations *)
 op-replicate =  <'!'> int
 replicate = token op-replicate
 op-elongate =  <'@'> int
@@ -14,15 +28,9 @@ op-sample =  <':'> int
 sample = word op-sample
 op-euclidean = <'('> int <ws? ',' ws?> int (<ws? ',' ws?> int)? <')'>
 euclidean = (word | int | float | sample) op-euclidean
-fast?
-alt = <#'\<'> stack <#'\>'>
-fast?
-fast = token <'*'> int
-slow = token <'/'> int
-degrade = <'?'> float?
-ws = #"\s+"
-word = #"[a-zA-Z]+" (degrade?)
-stack = pattern (<ws> <','> <ws> pattern)*
-int = #"[0-9]+" (degrade?)
-float = #"[+-]?([0-9]*[.])?[0-9]+"
-silence = "~"
+op-fast = <'*'> int
+fast = token op-fast
+op-slow = <'/'> int
+slow = token op-slow
+op-degrade = <'?'> float?
+degrade = token op-degrade

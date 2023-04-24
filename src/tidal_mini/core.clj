@@ -6,8 +6,12 @@
     (slurp "src/tidal_mini/grammar.txt"))
 
   (defn parse-tidal-pattern [input]
-    (let [parser (insta/parser tidal-pattern-grammar)]
-      (insta/parse  parser input)))
+    (let [parser (insta/parser tidal-pattern-grammar)
+          parses (insta/parses  parser input)
+          [parsed-data & extra-parses] parses]
+      (when (seq extra-parses)
+        (throw (ex-info "Ambiguous grammar" {:parses parses})))
+      parsed-data))
 
   (let [input "a ~  b*2 [c*2 c] <d e> . <a b>!2 a/2 [a , <b , c>]"]
     (parse-tidal-pattern input))
@@ -16,6 +20,16 @@
   (let [input "bd {bd hh sn}"]
     (parse-tidal-pattern input))
   (let [input "bd {bd hh sn}%5"]
+    (parse-tidal-pattern input))
+  (let [input "bd bd?0.5"]
+    (parse-tidal-pattern input))
+  (let [input "bd [bd | sn]"]
+    (parse-tidal-pattern input))
+  (let [input "bd@2 bd"]
+    (parse-tidal-pattern input))
+  (let [input "bd:2 bd"]
+    (parse-tidal-pattern input))
+  (let [input "bd(3, 8, 1)"]
     (parse-tidal-pattern input)))
 
 (do

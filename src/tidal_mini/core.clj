@@ -3,7 +3,7 @@
 
 (do
   (def tidal-pattern-grammar
-    (slurp "src/tidal_mini/grammar.txt"))
+    (slurp "src/tidal_mini/tidal.grammar"))
 
   (defn parse-tidal-pattern [input]
     (let [parser (insta/parser tidal-pattern-grammar)

@@ -1,3 +1,4 @@
+(* The pattern *)
 pattern = cat (<ws> <'.'> <ws> cat)*
 
 (* Basic types *)

@@ -7,11 +7,12 @@ word = #"[a-zA-Z]+"
 int = #"[0-9]+"
 float = #"[+-]?([0-9]*[.])?[0-9]+"
 silence = "~"
+<comma> =  <ws? ',' ws?>
 <token> = word | sample | int | silence | fast | group | alt | slow | polymeter | elongate | replicate | euclidean | choose | degrade
 
 (* Pattern structures *)
 cat = token (<ws>? token)*
-stack = pattern (<ws> <','> <ws> pattern)*
+stack = pattern (comma pattern)*
 group = <#'\['> stack <#'\]'>
 alt = <#'\<'> stack <#'\>'>
 polymeter = <#'\{'> stack <#'\}'> polymeter-steps?
@@ -26,7 +27,7 @@ op-elongate =  <'@'> int
 elongate = token op-elongate
 op-sample =  <':'> int
 sample = word op-sample
-op-euclidean = <'('> int <ws? ',' ws?> int (<ws? ',' ws?> int)? <')'>
+op-euclidean = <'('> int comma int (comma int)? <')'>
 euclidean = (word | int | float | sample) op-euclidean
 op-fast = <'*'> int
 fast = token op-fast

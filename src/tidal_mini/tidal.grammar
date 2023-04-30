@@ -3,12 +3,12 @@ pattern = cat (<ws> <'.'> <ws> cat)*
 
 (* Basic types *)
 ws = #"\s+"
-word = #"[a-zA-Z0-9]+"
+word = #"[a-zA-Z0-9]([a-zA-Z0-9]*)"
 int = #"[0-9]+"
-float = #"[+-]?([0-9]*[.])?[0-9]+"
+float = (!'?' #"\d+(\.\d+)")
 silence = "~"
 <comma> =  <ws? ',' ws?>
-<token> = word | sample | int | silence | fast | group | alt | slow | polymeter | elongate | replicate | euclidean | choose | degrade
+<token> = word | sample | int | float | silence | fast | group | alt | slow | polymeter | elongate | replicate | euclidean | choose | degrade
 
 (* Pattern structures *)
 cat = token (<ws>? token)*
@@ -33,5 +33,6 @@ op-fast = <'*'> int
 fast = token op-fast
 op-slow = <'/'> int
 slow = token op-slow
-op-degrade = <'?'> float?
+degrade-amount = #"([0-9]*[.])?[0-9]+"
+op-degrade = <'?'> degrade-amount?
 degrade = token op-degrade

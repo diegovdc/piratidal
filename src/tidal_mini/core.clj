@@ -149,8 +149,10 @@
                 (if-not (and (<= start ev-start)
                              (< ev-start end))
                   acc
-                  (conj acc (assoc event :arc
-                                   (translate-arc ratio [elapsed-arc end-arc] arc))))))
+                  (conj acc (assoc event
+                                   :arc (translate-arc ratio [elapsed-arc end-arc] arc)
+                                   ;; set the actual cycle and not the cycle it was used to calculate the slowed pattern
+                                   :cycle cycle)))))
             []))))
   (take-slow-segment2
    {:speed 1
@@ -188,7 +190,8 @@
                                      (double? x)
                                      (ratio? x)
                                      (= x :silence)) {:event x
-                                                      :arc [elapsed-arc end-arc]}
+                                                      :arc [elapsed-arc end-arc]
+                                                      :cycle cycle}
 
                                 (:elongated x)
                                 (make-schedule*
@@ -208,15 +211,17 @@
                                              x)
 
                                 (:fast x)
-                                (map
-                                 #(make-schedule*
-                                   {:index 0
-                                    :elapsed-arc (+ elapsed-arc
-                                                    (* % (/ ratio length (:speed x))))
-                                    :ratio (/ ratio length (:speed x))
-                                    :cycle (+ (* (:speed x) cycle) %)}
-                                   [(:fast x)])
-                                 (range (:speed x)))
+                                (->> (map
+                                      #(make-schedule*
+                                        {:index 0
+                                         :elapsed-arc (+ elapsed-arc
+                                                         (* % (/ ratio length (:speed x))))
+                                         :ratio (/ ratio length (:speed x))
+                                         :cycle (+ (* (:speed x) cycle) %)}
+                                        [(:fast x)])
+                                      (range (:speed x)))
+                                     flatten
+                                     (map #(assoc % :cycle cycle)))
 
                                 (:slow x)
                                 (let [ratio* (/ ratio length)]
@@ -227,23 +232,11 @@
                                          :cycle (quot cycle (:speed x))}
                                         [(:slow x)])
                                        flatten
-                                       #_(take-slow-segment cycle ratio* (:speed x))
                                        (take-slow-segment2
                                         {:speed (:speed x)
                                          :cycle cycle
                                          :elapsed-arc elapsed-arc
-                                         :end-arc end-arc})
-                                       #_(filter (fn [{:keys [arc] :as ev}]
-                                                   (let [range* (/ 1 (* (:speed x) ratio*))
-                                                         min* (* (mod cycle (:speed x)) range*)
-                                                         max* (+ min* range*)]
-                                                     (and (<= min* (first arc))
-                                                          (< (first arc) max*)))))
-                                       #_(map (fn [event-data]
-                                                (update event-data :arc
-                                                        (fn [arc]
-                                                          (map #(* % (:speed x))
-                                                               arc)))))))
+                                         :end-arc end-arc})))
 
                                 (and slow-cat? (:stack x))
                                 (->> x

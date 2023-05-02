@@ -26,13 +26,13 @@
   (reset! cps 9/6)
   (cycle-dur-ms @cps))
 
-(do
-  (defn schedule-event
-    [cycle-start-time {:keys [arc] :as event}]
-    (apply-at
-     (+ cycle-start-time (* (first arc) (cycle-dur-ms @cps)))
-     #(sd/send-message @sd/osc-client event)))
+(defn schedule-event
+  [cycle-start-time {:keys [arc] :as event}]
+  (apply-at
+   (+ cycle-start-time (* (first arc) (cycle-dur-ms @cps)))
+   #(sd/send-message @sd/osc-client event)))
 
+(comment
   (schedule-event (now) {:event {:word "bd"} :arc [1/2 3/4] :gain 1} #_{:event {:word "bd"}, :arc [0 1/3], :cycle 0, :gain 1, :note 12}))
 
 (defn schedule-cycle
@@ -42,7 +42,6 @@
 
 (def next-cycle-patterns (atom []))
 
-(-> @next-cycle-patterns)
 (defn start-tick
   "starts or updates the cycle"
   [new-cps]
@@ -72,7 +71,15 @@
 (comment
   (start-tick 1)
   (gp/stop))
-(-> @d-patterns)
+
+(comment
+  (declare d)
+  (d 1 "[bd <hh*2 sd>]*2"
+     (gain "1 <0.5 0.9> 1")
+     (note "<1 2> <1 2>"))
+  (d 2 "arpy(3,8)"
+     (gain "1 <0.5 0.9> 1")
+     (note "<1 2> <1 2>")))
 
 (defmacro d
   [id pattern & patterns]
@@ -82,19 +89,6 @@
      pattern#))
 
 (comment
-  (d 1 "[bd <hh*2 sd>]*2"
-     (gain "1 <0.5 0.9> 1")
-     (note "<1 2> <1 2>")))
-
-(comment
-  (-> @d-patterns (get 1))
   (macroexpand-1
    '(d 1 "a b c"
-       (gain "1 <2 1> 3"))))
-
-(comment
-  (make-generator
-   1
-   (-> "a b c"
-       parse-pattern
        (gain "1 <2 1> 3"))))

@@ -1,9 +1,9 @@
-(ns tidal-mini.core-test
+(ns tidal-mini.schedule-test
   (:require
    [clojure.string :as str]
    [clojure.test :refer [deftest is testing]]
    [tidal-mini.control-patterns :refer [gain note]]
-   [tidal-mini.core
+   [tidal-mini.schedule
     :refer [make-schedule polymeter->stack polymeter-step-at-cycle&index]]
    [tidal-mini.parser :refer [parse-pattern]]))
 

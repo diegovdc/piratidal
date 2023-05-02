@@ -1,8 +1,9 @@
 {:deps {org.clojure/clojure {:mvn/version "1.11.1"}
         instaparse/instaparse {:mvn/version "1.4.12"}
         io.helins/interval {:mvn/version "1.0.0-beta0"}
-        overtone/osc-clj  {:mvn/version "0.9.0"}}
- :paths ["src"]
+        overtone/osc-clj  {:mvn/version "0.9.0"}
+        time-time/time-time {:local/root "/Users/diego/Music/code/time-tiem/"}}
+ :paths ["src" "test"]
  :test-paths ["test"]
  :aliases {:test {:extra-paths ["test"]
                   :extra-deps {io.github.cognitect-labs/test-runner

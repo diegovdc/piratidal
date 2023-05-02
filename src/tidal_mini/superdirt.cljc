@@ -39,12 +39,15 @@
   (make-play-msg
    {:event {:word "bd"} :arc [1/2 3/4] :gain 1}))
 
-(defn send-message
+(defn send-message*
   [osc-send osc-client event]
   (apply osc-send osc-client (make-play-msg event)))
 
+(def send-message
+  (partial send-message* osc/osc-send))
+
 (comment
-  (send-message osc/osc-send @osc-client {:event {:word "bd"} :arc [1/2 3/4] :gain 1}))
+  (send-message @osc-client {:event {:word "bd"} :arc [1/2 3/4] :gain 1}))
 (comment
   ;; example
   (osc/osc-debug true)

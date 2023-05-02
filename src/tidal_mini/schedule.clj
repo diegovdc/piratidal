@@ -1,4 +1,4 @@
-(ns tidal-mini.core
+(ns tidal-mini.schedule
   (:require
    [tidal-mini.control-patterns :refer [apply-ctl-pattern gain]]
    [tidal-mini.parser :refer [parse-pattern]]

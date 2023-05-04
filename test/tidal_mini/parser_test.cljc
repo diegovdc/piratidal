@@ -134,12 +134,11 @@
               [:cat [:word "bd"] [:degrade [:word "bd"] [:op-degrade]]]]
              (parse-tidal "bd bd?" :check-ambiguous? true))))
     (testing "`:degrade` with amount a?0.1"
-      ;; FIXME grammar is ambiguous
-      #_(is (= [:pattern
-                [:cat
-                 [:word "bd"]
-                 [:degrade [:word "bd"] [:op-degrade [:degrade-amount "0.1"]]]]]
-               (parse-tidal "bd bd?0.1" :check-ambiguous? true))))
+      (is (= [:pattern
+              [:cat
+               [:word "bd"]
+               [:degrade [:word "bd"] [:op-degrade [:degrade-amount "0.1"]]]]]
+             (parse-tidal "bd bd?0.1" :check-ambiguous? true))))
     (testing "`:op-elongate`"
       (is (= [:pattern
               [:cat [:elongate [:word "bd"] [:op-elongate [:int "2"]]] [:word "bd"]]]
@@ -302,10 +301,9 @@ Expected:
   (testing "`:degrade` a?"
     (is (= [{:word "bd"} {:degrade {:word "bd"}, :amount 0.5}]
            (transform-tree (parse-tidal "bd bd?" :check-ambiguous? true)))))
-  ;; FIXME grammar is ambiguous
-  #_(testing "`:degrade` with amount a?0.1"
-      (is (= [{:word "bd"} {:degrade {:word "bd"}, :amount 0.1}]
-             (transform-tree (parse-tidal "bd bd?0.1" :check-ambiguous? true)))))
+  (testing "`:degrade` with amount a?0.1"
+    (is (= [{:word "bd"} {:degrade {:word "bd"}, :amount 0.1}]
+           (transform-tree (parse-tidal "bd bd?0.1" :check-ambiguous? true)))))
   (testing "`:op-elongate`"
     (is (= [{:elongated {:word "bd"}, :size 2} {:word "bd"}]
            (transform-tree (parse-tidal "bd@2 bd" :check-ambiguous? true))))

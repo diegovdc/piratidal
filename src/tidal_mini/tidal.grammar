@@ -34,5 +34,5 @@ fast = token op-fast
 op-slow = <'/'> int
 slow = token op-slow
 degrade-amount = #"([0-9]*[.])?[0-9]+"
-op-degrade = <'?'> degrade-amount?
+op-degrade = (<'?'> degrade-amount) | <'?'> !degrade-amount
 degrade = token op-degrade

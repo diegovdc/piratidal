@@ -19,9 +19,10 @@
 
 (comment
   (-> @d-patterns))
-(do
-  (def cycle-dur-ms
-    (memoize (fn [cps] (* 1000 (/ 1 cps))))))
+
+(def cycle-dur-ms
+  (memoize (fn [cps] (* 1000 (/ 1 cps)))))
+
 (comment
   (reset! cps 9/6)
   (cycle-dur-ms @cps))
@@ -92,3 +93,4 @@
   (macroexpand-1
    '(d 1 "a b c"
        (gain "1 <2 1> 3"))))
+

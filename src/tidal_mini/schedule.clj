@@ -1,7 +1,7 @@
 (ns tidal-mini.schedule
   (:require
-   [tidal-mini.control-patterns :refer [apply-ctl-pattern gain]]
-   [tidal-mini.parser :refer [parse-pattern]]
+   [tidal-mini.control-patterns :refer [apply-ctl-pattern]]
+   [tidal-mini.parser :refer [parse-pattern parse-tidal transform-tree]]
    [tidal-mini.utils :refer [wrap-at]]))
 
 (defn polymeter-step-at-cycle&index
@@ -126,7 +126,7 @@
       (loop [[ev-start ev-end] event-arc]
         (cond
           (and (<= start ev-start)
-               (< ev-start end)) [ev-start (min end ev-end)]
+               (< ev-start end)) [ev-start ev-end]
           (<= end ev-start) (recur [(- ev-start arc-span)
                                     (- ev-end arc-span)])
           (< ev-start start) (recur [(+ ev-start arc-span)
@@ -165,7 +165,6 @@
      :arc [3/4 1N]}]))
 
 (do
-  ;; #dbg
   (defn make-schedule*
     [{:keys [index elapsed-arc ratio cycle slow-cat? polymeter-steps]
       :or {index 0
@@ -303,12 +302,16 @@
   (defn make-schedule
     [config pattern]
     (flatten (make-schedule* config pattern)))
-  #_(->> "<bd sn>"
-         parse-tidal
-         transform-tree
-         (make-schedule {:index 0 :elapsed-arc 0})
-         flatten)
-  (-> "a b c"
-      parse-pattern
-      (gain "1 <2 1> 3")
-      (->> (make-schedule {:index 0 :elapsed-arc 0 :cycle 0}))))
+  (->> "<bd sn>"
+       parse-tidal
+       transform-tree
+       (make-schedule {:index 0 :elapsed-arc 0})
+       flatten)
+
+  (defn pat->schedule2
+    [pattern cycles]
+    (into [] (mapcat (fn [cycle]
+                       (->> pattern
+                            (make-schedule {:index 0 :elapsed-arc 0 :cycle cycle})))
+                     cycles)))
+  (-> (parse-pattern "[bd sd]/3")))

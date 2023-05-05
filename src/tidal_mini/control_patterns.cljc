@@ -1,6 +1,8 @@
 (ns tidal-mini.control-patterns
-  (:require [helins.interval.map :as imap]
-            [tidal-mini.parser :refer [parse-pattern]]))
+  (:require
+   [clojure.core :as math]
+   [helins.interval.map :as imap]
+   [tidal-mini.parser :refer [parse-pattern]]))
 
 (comment
   ;; interval-usage
@@ -64,12 +66,159 @@
 
 (def note (simple-ctl (partial simple-ctl-fn :note)))
 
+(do
+  #_(defn rev-ctl
+      [events & {:keys [elapsed-arc] :or {elapsed-arc 0}}]
+      (let [rev-events (reverse events)]
+        (:events
+         (reduce
+          (fn [{:keys [elapsed-arc cycle] :as acc} {:keys [arc] :as ev}]
+            (let [next-cycle? (>= elapsed-arc 1)
+                  elapsed-arc* (if next-cycle? (- elapsed-arc 1) elapsed-arc)
+                  arc-span (- (second arc) (first arc))
+                  arc-end (+ elapsed-arc* arc-span)
+                  cycle* (if next-cycle? (inc cycle) cycle)]
+              (-> acc
+                  (update :events conj
+                          (-> ev
+                              (assoc :arc [elapsed-arc* arc-end])
+                              (assoc :cycle cycle*)))
+                  (assoc :elapsed-arc arc-end))))
+          {:events [] :elapsed-arc elapsed-arc :cycle (-> events first :cycle)}
+          rev-events))))
+  (defn rev-ctl
+    [events & {:keys [elapsed-arc] :or {elapsed-arc 0}}]
+    (let [events* (partition-by :cycle events)]
+      (->> events*
+           (mapcat
+            (fn [events]
+              (:events
+               (reduce
+                (fn [{:keys [elapsed-arc cycle] :as acc}
+                     {:keys [arc] :as ev}]
+                  (let [next-cycle? (>= elapsed-arc 1)
+                        ends-on-next-cycle? (> (second arc) 1)
+                        elapsed-arc* (if next-cycle? (- elapsed-arc 1) elapsed-arc)
+                        arc-span (- (second arc) (first arc))
+                        arc-end (+ elapsed-arc* arc-span)
+                        cycle* (cond
+                                 ;; next-cycle? (inc cycle)
+                                 ;; ends-on-next-cycle? (dec cycle)
+                                 :else cycle)]
+                    (-> acc
+                        (update :events conj
+                                (-> ev
+                                    (assoc :arc [(- 1 (second arc))
+                                                 (- 1 (first arc))] #_[elapsed-arc* arc-end])
+                                    (assoc :cycle cycle*)))
+                        (assoc :elapsed-arc arc-end))))
+                {:events [] :elapsed-arc elapsed-arc :cycle (-> events first :cycle)}
+                (reverse events))))))))
+
+  (rev-ctl
+   [{:event 1 :arc [0 2] :cycle 0}])
+  (rev-ctl
+   [{:event {:word "bd"}, :arc [0 2/3], :cycle 0}
+    {:event :silence, :arc [2/3 4/3], :cycle 0}])
+  #_(defn reflect [cycle [arc-b arc-e]]
+      [(+ cycle (- (inc cycle) arc-e))
+       (+ cycle (- (inc cycle) arc-b))])
+
+  #_(reflect 0 [0 2]))
+
+(partition-by :cycle [{:event 1 :arc [0 1/2] :cycle 0}
+                      {:event 2 :arc [1/2 1] :cycle 0}
+                      {:event 3 :arc [0 1/2] :cycle 1}
+                      {:event 4 :arc [1/2 1] :cycle 1}])
+
+(defn rev [pattern]
+  [{:ctl-type :rev
+    :ctl-fn rev-ctl
+    :pattern pattern}])
+(- 1/2 2)
+#_(do
+    (defn palindrome-fast
+      [events]
+      (let [speed 2]
+        (map
+         (fn [ev]
+           (update ev :arc (fn [[s e]] [(/ s speed) (/ e speed)])))
+         events)))
+
+    (palindrome-fast [{:event {:word "bd"}, :arc [0N 1/3], :cycle 0}
+                      {:event {:word "hh"}, :arc [1/3 2/3], :cycle 0}
+                      {:event {:word "sn"}, :arc [2/3 1], :cycle 0}])
+    (palindrome-fast [{:event {:word "bd"}, :arc [0 2], :cycle 0}]))
+
+(do
+  (defn palindrome-ctl
+    [events]
+    (let [first-cycle (-> events first :cycle)]
+      (->> events
+           (partition-by :cycle)
+           (mapcat (fn [evs]
+                     (concat
+                      (map (fn [ev]
+                             (update ev :cycle
+                                     #(->
+                                       %
+                                       #_(- first-cycle)
+                                       (* 2)
+                                       #_(+ first-cycle))))
+                           evs)
+                      (map (fn [ev]
+                             (update ev :cycle
+                                     #(->
+                                       %
+                                       #_(- first-cycle)
+                                       (* 2)
+                                       inc
+                                       #_(+ first-cycle))))
+                           (rev-ctl evs)))))
+           (sort-by :cycle))))
+
+  (palindrome-ctl
+   #_[{:event {:word "bd"}, :arc [0 1/3], :cycle 0}
+      {:event {:word "hh"}, :arc [1/3 2/3], :cycle 0}
+      {:event {:word "sn"}, :arc [2/3 1N], :cycle 0}
+      {:event {:word "bd"}, :arc [0 1/3], :cycle 1}
+      {:event {:word "hh"}, :arc [1/3 2/3], :cycle 1}
+      {:event {:word "cp"}, :arc [2/3 1N], :cycle 1}]
+   [{:event {:word "bd"}, :arc [0 1/3], :cycle 3}
+    {:event {:word "bd"}, :arc [1/3 2/3], :cycle 3}
+    {:event :silence, :arc [2/3 1N], :cycle 3}
+    {:event {:word "hh"}, :arc [0N 1/3], :cycle 4}
+    {:event {:word "hh"}, :arc [1/3 2/3], :cycle 4}
+    {:event :silence, :arc [2/3 1N], :cycle 4}
+    {:event {:word "cp"}, :arc [0N 1/3], :cycle 5}
+    {:event {:word "cp"}, :arc [1/3 2/3], :cycle 5}
+    {:event :silence, :arc [2/3 1N], :cycle 5}])
+  (palindrome-ctl
+   [{:event {:word "bd"}, :arc [0 2/3], :cycle 0}
+    {:event :silence, :arc [2/3 4/3], :cycle 0}
+    {:event :silence, :arc [1/3 1N], :cycle 1}
+    {:event {:word "bd"}, :arc [0 2/3], :cycle 2}
+    {:event :silence, :arc [2/3 4/3], :cycle 2}]))
+
+(comment
+  (require '[tidal-mini.parser :as p]
+           '[tidal-mini.schedule :as sch])
+  (sch/pat->schedule2 (p/parse-pattern "[bd ~ ~]/2")
+                      (range 3)))
+
+(defn palindrome [pattern]
+  [{:ctl-type :palindrome
+    :ctl-fn palindrome-ctl
+    :pattern pattern}])
+
 (defn apply-ctl-pattern
-  [schedule-cycle-fn {:keys [ctl-type ctl-pattern-str ctl-fn pattern] :as ctl-data}]
-  (case ctl-type
-    :simple (let [events (flatten (schedule-cycle-fn pattern))
-                  ctl-events (flatten (schedule-cycle-fn (parse-pattern ctl-pattern-str)))]
-              (ctl-fn ctl-events events))))
+  [schedule-cycle-fn {:keys [ctl-type ctl-pattern-str ctl-fn pattern]}]
+  (let [make-events #(flatten (schedule-cycle-fn pattern))]
+    (case ctl-type
+      :simple (let [ctl-events (flatten (schedule-cycle-fn (parse-pattern ctl-pattern-str)))]
+                (ctl-fn ctl-events (make-events)))
+      :rev (ctl-fn (make-events))
+      :palindrome (ctl-fn (make-events)))))
 
 (gain
  [{:event 1, :arc [0 1/3]}

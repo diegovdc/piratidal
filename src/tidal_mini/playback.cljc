@@ -4,7 +4,7 @@
    [overtone.music.time :refer [apply-at]]
    [tidal-mini.control-patterns :refer [gain note]]
    [tidal-mini.parser :refer [parse-pattern]]
-   [tidal-mini.schedule :refer [make-schedule]]
+   [tidal-mini.query :refer [query]]
    [tidal-mini.superdirt :as sd]
    [time-time.dynacan.players.gen-poly :as gp]))
 
@@ -27,19 +27,19 @@
   (reset! cps 9/6)
   (cycle-dur-ms @cps))
 
-(defn schedule-event
+(defn schedule-value
   [cycle-start-time {:keys [arc] :as event}]
   (apply-at
    (+ cycle-start-time (* (first arc) (cycle-dur-ms @cps)))
    #(sd/send-message @sd/osc-client event)))
 
 (comment
-  (schedule-event (now) {:event {:word "bd"} :arc [1/2 3/4] :gain 1} #_{:event {:word "bd"}, :arc [0 1/3], :cycle 0, :gain 1, :note 12}))
+  (schedule-value (now) {:value {:word "bd"} :arc [1/2 3/4] :gain 1} #_{:value {:word "bd"}, :arc [0 1/3], :cycle 0, :gain 1, :note 12}))
 
 (defn schedule-cycle
   [cycle-start-time events]
-  (doseq [event events]
-    (schedule-event cycle-start-time event)))
+  (doseq [value events]
+    (schedule-value cycle-start-time value)))
 
 (def next-cycle-patterns (atom []))
 
@@ -54,12 +54,12 @@
    :tempo (cps->bpm new-cps)
    :on-event (gp/on-event
               (cond
-                (= 7/8 dur) ;; `dur` is provided by the `on-event` macro
+                (= 7/8 dur) ;; `dur` is provided by the `on-value` macro
                 (do
                     ;; FIXME the usage of current-cycle is kind of funky, semantically speaking
                   (reset! next-cycle-patterns
                           (mapcat (fn [[_k pattern]]
-                                    (make-schedule
+                                    (query
                                      {:index 0 :elapsed-arc 0 :cycle @current-cycle}
                                      pattern))
                                   @d-patterns))

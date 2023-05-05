@@ -12,42 +12,42 @@
 
 (do
 
-  (defn event->super-dirt-args
-    [event]
+  (defn value->super-dirt-args
+    [value]
     (into {} (map (fn [[k v]]
                     (cond
-                      (= :event k) ["s" (:word v)]
+                      (= :value k) ["s" (:word v)]
                       (string? v) [(name k) v]
                       (int? v) [(name k) (int v)]
                       :else [(name k) (float v)]))
-                  (dissoc event :arc))))
+                  (dissoc value :arc))))
 
-  (event->super-dirt-args
-   {:event {:word "bd"} :arc [1/2 3/4] :gain 1}))
+  (value->super-dirt-args
+   {:value {:word "bd"} :arc [1/2 3/4] :gain 1}))
 
 (defn make-play-msg
-  [event]
+  [value]
   (-> {"_id_", (int (swap! _id_ inc))
        "cps", (float 0.5625), ;; TODO unhardcode
        "orbit", (int 0)}
-      (merge (event->super-dirt-args event))
+      (merge (value->super-dirt-args value))
       seq
       (conj "/dirt/play")
       flatten))
 
 (comment
   (make-play-msg
-   {:event {:word "bd"} :arc [1/2 3/4] :gain 1}))
+   {:value {:word "bd"} :arc [1/2 3/4] :gain 1}))
 
 (defn send-message*
-  [osc-send osc-client event]
-  (apply osc-send osc-client (make-play-msg event)))
+  [osc-send osc-client value]
+  (apply osc-send osc-client (make-play-msg value)))
 
 (def send-message
   (partial send-message* osc/osc-send))
 
 (comment
-  (send-message @osc-client {:event {:word "bd"} :arc [1/2 3/4] :gain 1}))
+  (send-message @osc-client {:value {:word "bd"} :arc [1/2 3/4] :gain 1}))
 (comment
   ;; example
   (osc/osc-debug true)

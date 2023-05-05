@@ -21,11 +21,11 @@
 (defn ctl-events->imap
   [events]
   (reduce
-   (fn [imap {:keys [event arc]}]
+   (fn [imap {:keys [value arc]}]
      (imap/mark imap
                 (first arc)
                 (second arc)
-                event))
+                value))
    imap/empty
    events))
 
@@ -46,21 +46,21 @@
 
 (comment
   (def gain-imap
-    (ctl-events->imap [{:event 1, :arc [0 1/3]}
-                       {:event 0.2, :arc [1/3 2/3]}
-                       {:event 3, :arc [2/3 1N]}]))
+    (ctl-events->imap [{:value 1, :arc [0 1/3]}
+                       {:value 0.2, :arc [1/3 2/3]}
+                       {:value 3, :arc [2/3 1N]}]))
   (def gain-imap
-    (ctl-events->imap [{:event 1, :arc [0 1/3]}
-                       {:event 0.2, :arc [1/3 2/3]}
-                       {:event 3, :arc [2/3 1N]}]))
+    (ctl-events->imap [{:value 1, :arc [0 1/3]}
+                       {:value 0.2, :arc [1/3 2/3]}
+                       {:value 3, :arc [2/3 1N]}]))
   (-> gain-imap)
 
   (gain-imap 1/3)
   (gain-ctl
    gain-imap
-   [{:event {:word "a"}, :arc [0 1/3]}
-    {:event {:word "b"}, :arc [1/3 2/3]}
-    {:event {:word "c"}, :arc [2/3 1N]}]))
+   [{:value {:word "a"}, :arc [0 1/3]}
+    {:value {:word "b"}, :arc [1/3 2/3]}
+    {:value {:word "c"}, :arc [2/3 1N]}]))
 
 (def gain (simple-ctl (partial simple-ctl-fn :gain)))
 
@@ -116,20 +116,20 @@
                 (reverse events))))))))
 
   (rev-ctl
-   [{:event 1 :arc [0 2] :cycle 0}])
+   [{:value 1 :arc [0 2] :cycle 0}])
   (rev-ctl
-   [{:event {:word "bd"}, :arc [0 2/3], :cycle 0}
-    {:event :silence, :arc [2/3 4/3], :cycle 0}])
+   [{:value {:word "bd"}, :arc [0 2/3], :cycle 0}
+    {:value :silence, :arc [2/3 4/3], :cycle 0}])
   #_(defn reflect [cycle [arc-b arc-e]]
       [(+ cycle (- (inc cycle) arc-e))
        (+ cycle (- (inc cycle) arc-b))])
 
   #_(reflect 0 [0 2]))
 
-(partition-by :cycle [{:event 1 :arc [0 1/2] :cycle 0}
-                      {:event 2 :arc [1/2 1] :cycle 0}
-                      {:event 3 :arc [0 1/2] :cycle 1}
-                      {:event 4 :arc [1/2 1] :cycle 1}])
+(partition-by :cycle [{:value 1 :arc [0 1/2] :cycle 0}
+                      {:value 2 :arc [1/2 1] :cycle 0}
+                      {:value 3 :arc [0 1/2] :cycle 1}
+                      {:value 4 :arc [1/2 1] :cycle 1}])
 
 (defn rev [pattern]
   [{:ctl-type :rev
@@ -145,10 +145,10 @@
            (update ev :arc (fn [[s e]] [(/ s speed) (/ e speed)])))
          events)))
 
-    (palindrome-fast [{:event {:word "bd"}, :arc [0N 1/3], :cycle 0}
-                      {:event {:word "hh"}, :arc [1/3 2/3], :cycle 0}
-                      {:event {:word "sn"}, :arc [2/3 1], :cycle 0}])
-    (palindrome-fast [{:event {:word "bd"}, :arc [0 2], :cycle 0}]))
+    (palindrome-fast [{:value {:word "bd"}, :arc [0N 1/3], :cycle 0}
+                      {:value {:word "hh"}, :arc [1/3 2/3], :cycle 0}
+                      {:value {:word "sn"}, :arc [2/3 1], :cycle 0}])
+    (palindrome-fast [{:value {:word "bd"}, :arc [0 2], :cycle 0}]))
 
 (do
   (defn palindrome-ctl
@@ -178,27 +178,27 @@
            (sort-by :cycle))))
 
   (palindrome-ctl
-   #_[{:event {:word "bd"}, :arc [0 1/3], :cycle 0}
-      {:event {:word "hh"}, :arc [1/3 2/3], :cycle 0}
-      {:event {:word "sn"}, :arc [2/3 1N], :cycle 0}
-      {:event {:word "bd"}, :arc [0 1/3], :cycle 1}
-      {:event {:word "hh"}, :arc [1/3 2/3], :cycle 1}
-      {:event {:word "cp"}, :arc [2/3 1N], :cycle 1}]
-   [{:event {:word "bd"}, :arc [0 1/3], :cycle 3}
-    {:event {:word "bd"}, :arc [1/3 2/3], :cycle 3}
-    {:event :silence, :arc [2/3 1N], :cycle 3}
-    {:event {:word "hh"}, :arc [0N 1/3], :cycle 4}
-    {:event {:word "hh"}, :arc [1/3 2/3], :cycle 4}
-    {:event :silence, :arc [2/3 1N], :cycle 4}
-    {:event {:word "cp"}, :arc [0N 1/3], :cycle 5}
-    {:event {:word "cp"}, :arc [1/3 2/3], :cycle 5}
-    {:event :silence, :arc [2/3 1N], :cycle 5}])
+   #_[{:value {:word "bd"}, :arc [0 1/3], :cycle 0}
+      {:value {:word "hh"}, :arc [1/3 2/3], :cycle 0}
+      {:value {:word "sn"}, :arc [2/3 1N], :cycle 0}
+      {:value {:word "bd"}, :arc [0 1/3], :cycle 1}
+      {:value {:word "hh"}, :arc [1/3 2/3], :cycle 1}
+      {:value {:word "cp"}, :arc [2/3 1N], :cycle 1}]
+   [{:value {:word "bd"}, :arc [0 1/3], :cycle 3}
+    {:value {:word "bd"}, :arc [1/3 2/3], :cycle 3}
+    {:value :silence, :arc [2/3 1N], :cycle 3}
+    {:value {:word "hh"}, :arc [0N 1/3], :cycle 4}
+    {:value {:word "hh"}, :arc [1/3 2/3], :cycle 4}
+    {:value :silence, :arc [2/3 1N], :cycle 4}
+    {:value {:word "cp"}, :arc [0N 1/3], :cycle 5}
+    {:value {:word "cp"}, :arc [1/3 2/3], :cycle 5}
+    {:value :silence, :arc [2/3 1N], :cycle 5}])
   (palindrome-ctl
-   [{:event {:word "bd"}, :arc [0 2/3], :cycle 0}
-    {:event :silence, :arc [2/3 4/3], :cycle 0}
-    {:event :silence, :arc [1/3 1N], :cycle 1}
-    {:event {:word "bd"}, :arc [0 2/3], :cycle 2}
-    {:event :silence, :arc [2/3 4/3], :cycle 2}]))
+   [{:value {:word "bd"}, :arc [0 2/3], :cycle 0}
+    {:value :silence, :arc [2/3 4/3], :cycle 0}
+    {:value :silence, :arc [1/3 1N], :cycle 1}
+    {:value {:word "bd"}, :arc [0 2/3], :cycle 2}
+    {:value :silence, :arc [2/3 4/3], :cycle 2}]))
 
 (comment
   (require '[tidal-mini.parser :as p]
@@ -221,9 +221,9 @@
       :palindrome (ctl-fn (make-events)))))
 
 (gain
- [{:event 1, :arc [0 1/3]}
-  {:event 0.2, :arc [1/3 2/3]}
-  {:event 3, :arc [2/3 1N]}]
+ [{:value 1, :arc [0 1/3]}
+  {:value 0.2, :arc [1/3 2/3]}
+  {:value 3, :arc [2/3 1N]}]
  [{:word "a"} :silence {:word "b"}])
 
 (comment

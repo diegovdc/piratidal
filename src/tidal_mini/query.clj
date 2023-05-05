@@ -22,13 +22,13 @@
 
 
 (defn extend-arc
-  [speed event]
-  (update event :arc (partial map #(* speed %))))
+  [speed value]
+  (update value :arc (partial map #(* speed %))))
 
 (defn translate-arc
-  [arc-span reference-arc event-arc]
+  [arc-span reference-arc value-arc]
   (let [[start end] reference-arc]
-    (loop [[ev-start ev-end] event-arc]
+    (loop [[ev-start ev-end] value-arc]
       (cond
         (and (<= start ev-start)
              (< ev-start end)) [ev-start ev-end]
@@ -76,12 +76,12 @@
                   (let [end-arc (+ elapsed-arc (* (/ 1 length) ratio
                                         ; if `:elongated`
                                                   (:size x 1)))
-                        event (cond
+                        value (cond
                                 (or  (:word x)
                                      (int? x)
                                      (double? x)
                                      (ratio? x)
-                                     (= x :silence)) {:event x
+                                     (= x :silence)) {:value x
                                                       :arc [elapsed-arc end-arc]
                                                       :cycle cycle}
 
@@ -182,11 +182,11 @@
                                  x)
 
                                 :else (println "Warning, unknown pattern: " x))]
-                    (if-not event
+                    (if-not value
                       acc
                       (-> acc
                           (update :index inc)
-                          (update :events conj event)
+                          (update :events conj value)
                           (assoc :elapsed-arc end-arc
                                  :slow-cat? false)))))
                 {:index index :elapsed-arc elapsed-arc :events []}

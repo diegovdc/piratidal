@@ -64,17 +64,17 @@
        0     1     2       ; cycle
        0 1 2 0 1 2 0 1 2   ; current-step-index
        1 2 1 2 1 2 1 2 1   ; current-polymeter-step
-       0 1 2 3 4 5 6 7 8   ; event-index
+       0 1 2 3 4 5 6 7 8   ; value-index
        0 0 1 1 2 2 3 3 4   ; times-seen"
-    (is (= [{:event-index 0, :times-seen 0}
-            {:event-index 1, :times-seen 0}
-            {:event-index 2, :times-seen 1}
-            {:event-index 3, :times-seen 1}
-            {:event-index 4, :times-seen 2}
-            {:event-index 5, :times-seen 2}
-            {:event-index 6, :times-seen 3}
-            {:event-index 7, :times-seen 3}
-            {:event-index 8, :times-seen 4}]
+    (is (= [{:value-index 0, :times-seen 0}
+            {:value-index 1, :times-seen 0}
+            {:value-index 2, :times-seen 1}
+            {:value-index 3, :times-seen 1}
+            {:value-index 4, :times-seen 2}
+            {:value-index 5, :times-seen 2}
+            {:value-index 6, :times-seen 3}
+            {:value-index 7, :times-seen 3}
+            {:value-index 8, :times-seen 4}]
            (map #(apply polymeter-step-at-cycle&index 2 3 %)
                 [[0 0]
                  [0 1]
@@ -90,17 +90,17 @@
        0   1   2   3   4   ; cycle
        0 1 0 1 0 1 0 1 0   ; current-step-index
        1 2 3 1 2 3 1 2 3   ; current-polymeter-step
-       0 1 2 3 4 5 6 7 8   ; event-index
+       0 1 2 3 4 5 6 7 8   ; value-index
        0 0 0 1 1 1 2 2 2   ; times-seen"
-    (is (= [{:event-index 0, :times-seen 0}
-            {:event-index 1, :times-seen 0}
-            {:event-index 2, :times-seen 0}
-            {:event-index 3, :times-seen 1}
-            {:event-index 4, :times-seen 1}
-            {:event-index 5, :times-seen 1}
-            {:event-index 6, :times-seen 2}
-            {:event-index 7, :times-seen 2}
-            {:event-index 8, :times-seen 2}]
+    (is (= [{:value-index 0, :times-seen 0}
+            {:value-index 1, :times-seen 0}
+            {:value-index 2, :times-seen 0}
+            {:value-index 3, :times-seen 1}
+            {:value-index 4, :times-seen 1}
+            {:value-index 5, :times-seen 1}
+            {:value-index 6, :times-seen 2}
+            {:value-index 7, :times-seen 2}
+            {:value-index 8, :times-seen 2}]
            (map #(apply polymeter-step-at-cycle&index 3 2 %)
                 [[0 0]
                  [0 1]

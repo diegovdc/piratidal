@@ -3,13 +3,13 @@
    [clojure.test :refer [deftest is testing]]
    [tidal-mini.control-patterns :refer [gain note palindrome rev]]
    [tidal-mini.parser :refer [parse-pattern]]
-   [tidal-mini.schedule :refer [make-schedule]]))
+   [tidal-mini.query :refer [query]]))
 
 (defn pat->schedule2
   [pattern cycles]
   (into [] (mapcat (fn [cycle]
                      (->> pattern
-                          (make-schedule {:index 0 :elapsed-arc 0 :cycle cycle})))
+                          (query {:index 0 :elapsed-arc 0 :cycle cycle})))
                    cycles)))
 
 (deftest gain-test

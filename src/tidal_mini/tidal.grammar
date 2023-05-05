@@ -8,13 +8,13 @@ int = #"[0-9]+"
 float = (!'?' #"\d+(\.\d+)")
 silence = "~"
 <comma> =  <ws? ',' ws?>
-<token> = word | sample | int | float | silence | fast | group | alt | slow | polymeter | elongate | replicate | euclidean | choose | degrade
+<token> = word | sample | int | float | silence | fast | group | slowcat | slow | polymeter | elongate | replicate | euclidean | choose | degrade
 
 (* Pattern structures *)
 cat = token (<ws>? token)*
 stack = pattern (comma pattern)*
 group = <#'\['> stack <#'\]'>
-alt = <#'\<'> stack <#'\>'>
+slowcat = <#'\<'> stack <#'\>'>
 polymeter = <#'\{'> stack <#'\}'> polymeter-steps?
 polymeter-steps = <'%'> int
 

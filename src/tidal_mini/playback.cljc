@@ -1,7 +1,7 @@
 (ns tidal-mini.playback
   (:require
    [overtone.at-at :refer [now]]
-   [overtone.music.time :refer [apply-at stop-player]]
+   [overtone.music.time :refer [apply-at]]
    [tidal-mini.control-patterns :refer [gain note]]
    [tidal-mini.parser :refer [parse-pattern]]
    [tidal-mini.schedule :refer [make-schedule]]
@@ -93,4 +93,3 @@
   (macroexpand-1
    '(d 1 "a b c"
        (gain "1 <2 1> 3"))))
-

@@ -17,44 +17,44 @@
              (polymeter->stack 2 poly)))
       (is (= {:stack [[{:word "a"} {:word "b"}]]}
              (polymeter->stack 3 poly)))))
-  (testing "Will calculate the current `:alt` cycle"
+  (testing "Will calculate the current `:slowcat` cycle"
     (is (= {:stack
-            [[{:alt [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 0}
+            [[{:slowcat [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 0}
               {:word "a"}
               {:word "b"}
-              {:alt [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 1}]]}
+              {:slowcat [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 1}]]}
            (polymeter->stack
             0
             {:polymeter
-             {:stack [[{:alt [{:stack [[{:word "c"}
+             {:stack [[{:slowcat [{:stack [[{:word "c"}
                                         {:word "d"}]]}]}
                        {:word "a"}
                        {:word "b"}]]}
              :steps 4})))
-    (testing "and will not confuse the `:alt` indexes"
+    (testing "and will not confuse the `:slowcat` indexes"
       (is (= {:stack
-              [[{:alt [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 0}
-                {:alt [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 0}
+              [[{:slowcat [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 0}
+                {:slowcat [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 0}
                 {:word "b"}
-                {:alt [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 1}]]}
+                {:slowcat [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 1}]]}
              (polymeter->stack
               0
               {:polymeter
-               {:stack [[{:alt [{:stack [[{:word "c"} {:word "d"}]]}]}
-                         {:alt [{:stack [[{:word "c"} {:word "d"}]]}]}
+               {:stack [[{:slowcat [{:stack [[{:word "c"} {:word "d"}]]}]}
+                         {:slowcat [{:stack [[{:word "c"} {:word "d"}]]}]}
                          {:word "b"}]]}
                :steps 4}))))
     (testing "will work for cycles other than `0`"
       (is (= {:stack
-              [[{:alt [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 1}
+              [[{:slowcat [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 1}
                 {:word "b"}
-                {:alt [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 2}
-                {:alt [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 2}]]}
+                {:slowcat [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 2}
+                {:slowcat [{:stack [[{:word "c"} {:word "d"}]]}], :cycle 2}]]}
              (polymeter->stack
               1
               {:polymeter
-               {:stack [[{:alt [{:stack [[{:word "c"} {:word "d"}]]}]}
-                         {:alt [{:stack [[{:word "c"} {:word "d"}]]}]}
+               {:stack [[{:slowcat [{:stack [[{:word "c"} {:word "d"}]]}]}
+                         {:slowcat [{:stack [[{:word "c"} {:word "d"}]]}]}
                          {:word "b"}]]}
                :steps 4}))))))
 

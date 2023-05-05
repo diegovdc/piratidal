@@ -52,41 +52,41 @@
                             [:pattern
                              [:cat [:word "sn"] [:word "hh"]]]]]]]]]]]
              (parse-tidal "bd [bd [sn hh]]" :check-ambiguous? true))))
-    (testing "`:alt` <a b>"
+    (testing "`:slowcat` <a b>"
       (is (= [:pattern
               [:cat
                [:word "bd"]
-               [:alt [:stack
-                      [:pattern
-                       [:cat
-                        [:word "sn"] [:word "hh"]]]]]]]
+               [:slowcat [:stack
+                          [:pattern
+                           [:cat
+                            [:word "sn"] [:word "hh"]]]]]]]
              (parse-tidal "bd <sn hh>" :check-ambiguous? true))))
-    (testing "`:alt` <a b> with `x!2`"
+    (testing "`:slowcat` <a b> with `x!2`"
       (is (= [:pattern
               [:cat
                [:word "bd"]
                [:replicate
-                [:alt [:stack [:pattern [:cat [:word "sn"] [:word "hh"]]]]]
+                [:slowcat [:stack [:pattern [:cat [:word "sn"] [:word "hh"]]]]]
                 [:op-replicate [:int "2"]]]]]
              (parse-tidal "bd <sn hh>!2" :check-ambiguous? true))))
-    (testing "`:alt` <a b> with `x/2`"
+    (testing "`:slowcat` <a b> with `x/2`"
       (is (= [:pattern
               [:cat
                [:word "bd"]
                [:slow
-                [:alt [:stack [:pattern [:cat [:word "sn"] [:word "hh"]]]]]
+                [:slowcat [:stack [:pattern [:cat [:word "sn"] [:word "hh"]]]]]
                 [:op-slow [:int "2"]]]]]
              (parse-tidal "bd <sn hh>/2" :check-ambiguous? true))))
-    (testing "Nested `:alt` <a <a b>"
+    (testing "Nested `:slowcat` <a <a b>"
       (is (= [:pattern
               [:cat
                [:word "bd"]
-               [:alt
+               [:slowcat
                 [:stack
                  [:pattern
                   [:cat
                    [:word "sn"]
-                   [:alt
+                   [:slowcat
                     [:stack
                      [:pattern
                       [:cat [:word "hh"] [:word "bd"]]]]]]]]]]]
@@ -191,10 +191,10 @@
                 [:stack
                  [:pattern
                   [:cat [:fast [:word "c"] [:op-fast [:int "2"]]] [:word "c"]]]]]
-               [:alt [:stack [:pattern [:cat [:word "d"] [:word "e"]]]]]]
+               [:slowcat [:stack [:pattern [:cat [:word "d"] [:word "e"]]]]]]
               [:cat
                [:replicate
-                [:alt [:stack [:pattern [:cat [:word "a"] [:word "b"]]]]]
+                [:slowcat [:stack [:pattern [:cat [:word "a"] [:word "b"]]]]]
                 [:op-replicate [:int "2"]]]
                [:slow [:word "a"] [:op-slow [:int "2"]]]
                [:group
@@ -202,7 +202,7 @@
                  [:pattern [:cat [:word "a"]]]
                  [:pattern
                   [:cat
-                   [:alt
+                   [:slowcat
                     [:stack
                      [:pattern [:cat [:word "b"]]]
                      [:pattern [:cat [:word "c"]]]]]]]]]]]
@@ -256,21 +256,21 @@ Expected:
                        [{:stack [[{:word "sn"}]
                                  [{:word "hh"}]]}]]]}]]
            (transform-tree (parse-tidal "bd [bd [sn  , hh]]" :check-ambiguous? true)))))
-  (testing "`:alt` <a b>"
+  (testing "`:slowcat` <a b>"
     (is (= [{:word "bd"}
-            {:alt [{:stack [[{:word "sn"}
-                             {:word "hh"}]]}]}]
+            {:slowcat [{:stack [[{:word "sn"}
+                                 {:word "hh"}]]}]}]
            (transform-tree (parse-tidal "bd <sn hh>" :check-ambiguous? true)))))
-  (testing "`:alt` <a b> with `x*2`"
+  (testing "`:slowcat` <a b> with `x*2`"
     (is (= [{:word "bd"}
-            {:fast {:alt [{:stack [[{:word "sn"} {:word "hh"}]]}]}, :speed 2}]
+            {:fast {:slowcat [{:stack [[{:word "sn"} {:word "hh"}]]}]}, :speed 2}]
            (transform-tree (parse-tidal "bd <sn hh>*2" :check-ambiguous? true)))))
-  (testing "Nested `:alt` <a <a b>"
+  (testing "Nested `:slowcat` <a <a b>"
     (is (= [{:word "bd"}
-            {:alt
+            {:slowcat
              [{:stack
                [[{:word "sn"}
-                 {:alt [{:stack [[{:word "hh"} {:word "bd"}]]}]}]]}]}]
+                 {:slowcat [{:stack [[{:word "hh"} {:word "bd"}]]}]}]]}]}]
            (transform-tree (parse-tidal "bd <sn <hh bd>>" :check-ambiguous? true)))))
   (testing "`:polymeter` {a b c}"
     (is (= [{:word "bd"}

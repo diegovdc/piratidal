@@ -49,7 +49,7 @@
     :silence (constantly :silence)
     :group vector
     :stack (fn [& xs] {:stack (into [] xs)})
-    :alt (fn [& xs] {:alt (into [] xs)})
+    :slowcat (fn [& xs] {:slowcat (into [] xs)})
     :fast (fn [x [_ speed]]
             {:fast x
              :speed speed})

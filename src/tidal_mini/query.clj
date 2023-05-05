@@ -68,7 +68,7 @@
      pattern]
     (let [length (case pattern
                    :stack (pattern-length (:stack pattern))
-                   :alt 1
+                   :slowcat 1
                    :polymeter 1
                    (pattern-length pattern))]
       (:events (reduce
@@ -155,14 +155,14 @@
                                    %)
                                  (:stack x))
 
-                                (:alt x)
+                                (:slowcat x)
                                 (query*
                                  {:index index
                                   :elapsed-arc elapsed-arc
                                   :ratio (/ ratio length)
                                   :cycle (:cycle x cycle)
                                   :slow-cat? true}
-                                 (:alt x))
+                                 (:slowcat x))
 
                                 (:polymeter x)
                                 (query*

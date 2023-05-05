@@ -272,7 +272,7 @@
                   {:event 0.2, :arc [1/3 2/3], :cycle 0}
                   {:event 3, :arc [2/3 1N], :cycle 0}]
                  (pat->query "1 0.2 3" [0]))))
-        (testing "`:alt`"
+        (testing "`:slowcat`"
           (is (= [{:event 1, :arc [0 1/3], :cycle 0}
                   {:event 0.2, :arc [1/3 2/3], :cycle 0}
                   {:event 3, :arc [2/3 1N], :cycle 0}

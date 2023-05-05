@@ -41,8 +41,8 @@
                (reduce
                 (fn [acc step]
                   (let [pat (wrap-at (+ (* cycle steps) step) cat)
-                        alt? (:alt pat)
-                        pat* (if-not alt? pat
+                        slowcat? (:slowcat pat)
+                        pat* (if-not slowcat? pat
                                      (assoc pat :cycle (:times-seen
                                                         (polymeter-step-at-cycle&index
                                                          (count cat)
@@ -51,12 +51,12 @@
                                                          step))))]
                     (update acc :cat conj pat*)))
                 {:cat []
-                 :alt-indexes {}}
+                 :slowcat-indexes {}}
                 (range steps))))
             cats))})
   (polymeter->stack
    1
    {:polymeter
     {:stack
-     [[{:word "bd"} {:alt [{:stack [[{:word "hh"} {:word "cp"} 808]]}]}]]}
+     [[{:word "bd"} {:slowcat [{:stack [[{:word "hh"} {:word "cp"} 808]]}]}]]}
     :steps 3}))

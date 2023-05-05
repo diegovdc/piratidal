@@ -5,8 +5,8 @@
    [tidal-mini.control-patterns :refer [gain note]]
    [tidal-mini.parser :refer [parse-pattern]]
    [tidal-mini.schedule :refer [make-schedule]]
-   [time-time.dynacan.players.gen-poly :as gp]
-   [tidal-mini.superdirt :as sd]))
+   [tidal-mini.superdirt :as sd]
+   [time-time.dynacan.players.gen-poly :as gp]))
 
 (defonce cps (atom 90/60)) ; 120 bpm
 (defonce current-cycle (atom 0))

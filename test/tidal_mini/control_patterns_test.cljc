@@ -1,7 +1,7 @@
 (ns tidal-mini.control-patterns-test
   (:require
    [clojure.test :refer [deftest is testing]]
-   [tidal-mini.control-patterns :refer [gain note palindrome rev]]
+   [tidal-mini.control-patterns :refer [gain note palindrome rev slow]]
    [tidal-mini.parser :refer [parse-pattern]]
    [tidal-mini.query :refer [query]]))
 
@@ -11,6 +11,31 @@
                      (->> pattern
                           (query {:index 0 :elapsed-arc 0 :cycle cycle})))
                    cycles)))
+
+(deftest slow-test
+  (is (= [{:value {:word "bd"}, :arc [0 2/3], :cycle 0, :gain 1}
+          {:value {:word "hh"}, :arc [2/3 4/3], :cycle 0, :gain 2}
+          {:value {:word "sn"}, :arc [1/3 1N], :cycle 1, :gain 1}]
+         (-> (parse-pattern "[bd hh sn]")
+             (slow 2)
+             (gain "1 2")
+             (pat->schedule2 (range 2)))))
+  (testing "The position of a pattern like `slow` vs `gain` is somewhat inverted from what one would expect in tidal"
+    (is (= [{:value {:word "bd"}, :arc [0 1N], :cycle 0, :gain 1}
+            {:value {:word "hh"}, :arc [0N 1N], :cycle 1, :gain 1}
+            {:value {:word "sn"}, :arc [0N 1N], :cycle 2, :gain 1}]
+           (-> (parse-pattern "bd hh sn")
+               (slow 3)
+               (gain "1 2")
+               (pat->schedule2 (range 3)))))
+
+    (is (= [{:value {:word "bd"}, :arc [0 1N], :cycle 0, :gain 1}
+            {:value {:word "hh"}, :arc [0N 1N], :cycle 1, :gain 1}
+            {:value {:word "sn"}, :arc [0N 1N], :cycle 2, :gain 2}]
+           (-> (parse-pattern "bd hh sn")
+               (gain "1 2")
+               (slow 3)
+               (pat->schedule2 (range 3)))))))
 
 (deftest gain-test
   (testing

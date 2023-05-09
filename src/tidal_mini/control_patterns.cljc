@@ -135,7 +135,11 @@
   [{:ctl-type :rev
     :ctl-fn rev-ctl
     :pattern pattern}])
-(- 1/2 2)
+
+(defn slow [pattern speed]
+  [{:slow pattern
+    :speed speed}])
+
 #_(do
     (defn palindrome-fast
       [events]

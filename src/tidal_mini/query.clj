@@ -1,7 +1,8 @@
 (ns tidal-mini.query
   (:require
+   [clojure.math :as math]
    [tidal-mini.control-patterns :refer [apply-ctl-pattern]]
-   [tidal-mini.parser :refer [parse-pattern parse-tidal transform-tree]]
+   [tidal-mini.parser :refer [parse-pattern]]
    [tidal-mini.polymeter :refer [polymeter->stack]]
    [tidal-mini.utils :refer [wrap-at]]))
 
@@ -57,6 +58,19 @@
                                  :cycle cycle)))))
           []))))
 
+(defn normalize-event-time
+  [{:as event :keys [arc]}
+   & {:keys [scaling-factor query-start]
+      :or {scaling-factor 1
+           query-start 0}}]
+  (let [cycle* (quot (* scaling-factor (first arc)) 1)
+        arc* (mapv #(- (* scaling-factor %) cycle*) arc)
+        partial? (< (first arc) query-start (second arc))]
+    #_(println {:query-start query-start :arc (first arc) :partial? partial?})
+    (cond-> (assoc event
+                   :cycle cycle*
+                   :arc arc*)
+      partial?  (assoc :partial? partial?))))
 (do
   (defn query*
     [{:keys [index elapsed-arc ratio cycle slow-cat? polymeter-steps]
@@ -103,17 +117,70 @@
                                              x)
 
                                 (:fast x)
-                                (->> (map
-                                      #(query*
-                                        {:index 0
-                                         :elapsed-arc (+ elapsed-arc
-                                                         (* % (/ ratio length (:speed x))))
-                                         :ratio (/ ratio length (:speed x))
-                                         :cycle (+ (* (:speed x) cycle) %)}
-                                        [(:fast x)])
-                                      (range (:speed x)))
-                                     flatten
-                                     (map #(assoc % :cycle cycle)))
+                                (->>
+                                 (let [speed (:speed x)
+                                       span (let [c (* cycle speed)] [c (+ cycle speed)])
+                                       cycle-end (mod (last span) 1)
+                                       last-cycle (/ (quot (last span) 1)
+                                                     speed)
+                                       norm-time (fn [events]
+                                                   (map #(normalize-event-time
+                                                          %
+                                                          :scaling-factor (/ 1 speed)
+                                                          :query-start (first span))
+                                                        events))]
+                                   (loop [current-cycle (int (math/floor (first span)))
+                                          acc-events []]
+                                     (let [events
+                                           (norm-time (flatten
+                                                       (query*
+                                                        {:index 0
+                                                         :elapsed-arc (+ elapsed-arc
+                                                                         (* current-cycle
+                                                                            (/ ratio length)))
+                                                         :ratio (/ ratio length)
+                                                         :cycle current-cycle}
+                                                        [(:fast x)])))
+                                           end-time (-> events last :arc second)
+                                           cycle* (-> events last :cycle)
+                                           stop? (and (>= cycle* last-cycle)
+                                                      (> end-time cycle-end))
+                                           events* (if-not stop?
+                                                     events
+                                                     (take-while #(or  (<= (-> % :arc second)
+                                                                           cycle-end)
+                                                                       (= cycle*
+                                                                          (if (= cycle-end 0)
+                                                                            (dec last-cycle)
+                                                                            last-cycle)))
+                                                                 events))
+                                           acc-events* (concat acc-events events*)]
+
+                                       (println acc-events)
+                                       (when (> (count acc-events*) 2000)
+                                         (throw (ex-info "Possible infinite loop on `:fast`" {:data x})))
+
+                                       (if stop?
+                                         (->> acc-events*
+                                              (drop-while (fn [%]
+                                                            #_(println cycle (:cycle %))
+                                                            (and (< (:cycle %) cycle)
+                                                                 (not (:partial? %)))))
+                                              (take-while #(or (< (first (:arc %)) end-arc)
+                                                               (:partial? %))))
+                                         (recur (inc current-cycle) acc-events*)))))
+
+                                 #_(map
+                                    #(query*
+                                      {:index 0
+                                       :elapsed-arc (+ elapsed-arc
+                                                       (* % (/ ratio length (:speed x))))
+                                       :ratio (/ ratio length (:speed x))
+                                       :cycle (+ (* (:speed x) cycle) %)}
+                                      [(:fast x)])
+                                    (range (:speed x)))
+                                 #_flatten
+                                 #_(map #(assoc % :cycle cycle)))
 
                                 (:slow x)
                                 (let [ratio* (/ ratio length)]
@@ -195,11 +262,11 @@
   (defn query
     [config pattern]
     (flatten (query* config pattern)))
-  (->> "<bd sn>"
-       parse-tidal
-       transform-tree
-       (query {:index 0 :elapsed-arc 0})
-       flatten)
+  #_(->> "<bd sn>"
+         parse-tidal
+         transform-tree
+         (query {:index 0 :elapsed-arc 0})
+         flatten)
 
   (defn pat->query2
     ;; NOTE `cycles` is a list of int
@@ -208,5 +275,10 @@
                        (->> pattern
                             (query {:index 0 :elapsed-arc 0 :cycle cycle})))
                      cycles)))
-  (-> (parse-pattern "[bd sd]/3")
-      (pat->query2 (range 4))))
+  [(pat->query2 (parse-pattern "<hh cp>*3 bd") [1])
+   "================="
+   #_(-> [{:fast {:word "bd"}, :speed 2}]
+         (pat->query2 [0]))
+   "================="
+   #_(-> [{:fast {:word "bd"}, :speed 2/3}]
+         (pat->query2 [1]))])

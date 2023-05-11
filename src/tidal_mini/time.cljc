@@ -1,9 +1,6 @@
 (ns tidal-mini.time
   (:require [tidal-mini.parser :refer [parse-pattern]]))
 
-(defmulti query
-  (fn [data] (:pattern/type data)))
-
 (defn inc-cycle
   [n]
   (int (inc n)))
@@ -11,6 +8,7 @@
 (defn inc-arc
   [n arc]
   (map #(+ n %) arc))
+
 (do
   (defn span-cycles
     [[start end]]
@@ -24,6 +22,8 @@
           :else (recur e (conj spans [b e]))))))
 
   #_(span-cycles [1/2 2]))
+(defmulti query
+  (fn [data] (:pattern/type data)))
 
 (defmethod query :atom
   [{:keys [value query-arc]}]
@@ -116,8 +116,7 @@
             :value {:pattern/type :atom :value "bd"}
             :speed 2}))
 
-
-                                        ;then can use this like this:
+;then can use this like this:
 
 
 (query {:pattern/type :atom
@@ -152,6 +151,12 @@
          :value {:pattern/type :atom :value "bd"}
          :query-arc [0 9]}))
 
+(query {:pattern/type :slow
+        :speed 2
+        :value {:pattern/type :atom
+                :value "bd"}
+        :query-arc [1 3]})
+
 (query {:pattern/type :fast
         :speed 3
         :value {:pattern/type :atom :value "bd"}
@@ -159,3 +164,65 @@
 
 {:pattern/type :cat
  :value [{:word "bd"} {:word "cp"}]}
+
+(do
+  (defn starts-in-cycle?
+    [cycle [arc-start]]
+    (<= cycle arc-start))
+  (starts-in-cycle? 1 [0 2]))
+
+(do
+  (defn ends-in-cycle?
+    [cycle [_ arc-end]]
+    (and (< cycle arc-end)
+         (<= arc-end (inc cycle))))
+  (ends-in-cycle? 0 [0 2]))
+
+(defn arc-lenght
+  [[start end]]
+  (- end start))
+
+(do
+  (defn rev-event
+    ;; TODO figure out if arc/active or arc/whole should be used
+    [current-cycle event]
+    (let [ends-in-cycle?* (ends-in-cycle? current-cycle
+                                          (:arc/active event))
+          reverse-arc (fn [arc]
+                        (let [[start end] arc
+                              next-cycle (int (inc current-cycle))
+                              start* (max current-cycle
+                                          (- next-cycle end))
+                              end* (- next-cycle start)]
+                          [(if ends-in-cycle?* start*
+                               (max current-cycle start*))
+                           end*]))]
+      (cond-> event
+        :always (update :arc/active reverse-arc)
+        (not ends-in-cycle?*) (assoc :value :silence
+                                     :original-value (:value event)))))
+
+  #_(rev-event 0 {:value "bd" :arc/active [0 1/2]})
+  ;; => {:value "bd", :arc/active [1/2 1]}
+
+  #_(rev-event 0 {:value "bd" :arc/active [0 1]})
+  ;; => {:value "bd", :arc/active [0 1]}
+
+  #_(rev-event 0 {:value "bd" :arc/active [0 1/2] :partial? true})
+  ;; => {:Value "bd", :arc/active [1/2 1], :partial? true}
+
+  (rev-event 1 {:value "bd" :arc/active [0 2]}))
+
+(do
+  (defn odd-cycle? [cycle-arc]
+    (odd? (first cycle-arc)))
+
+  (defn palindrome-cycles
+    "Slow down the query-arc to repeat each cycle twice so that the odd one can be reversed"
+    [query-arc]
+    (map (fn [cycle-arc]
+           (let [start (int (/ (first cycle-arc) 2))
+                 arc [start (inc start)]]
+             arc))
+         (span-cycles query-arc)))
+  (palindrome-cycles [1/2 4]))

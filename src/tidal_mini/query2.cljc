@@ -93,71 +93,49 @@
   [coll index]
   (nth coll (mod index (count coll))))
 
+(def event-summary (juxt :value :arc/active (comp nil? :has-start?)))
+
+;; TODO, test how this works when starting at spans different from 0 and perhaps a few cycles afterwards
 (defn slowcat
-  [{:keys [value]} query-arc]
-  (mapcat (fn [arc]
-            (let [v (wrap-nth value (first arc))
-                  events (query v arc)]
-              events))
-          (span-cycles query-arc)))
+  [{:keys [value len]} query-arc]
+  (let [[start end] query-arc]
+    (loop [start* (int start)
+           events []]
+      (let [i (mod start* len)
+            cycle (quot start* len)
+            value* (wrap-nth value (int i))
+            ratio (:ratio value* 1)
+            end* (+ ratio start*)
+            update-arc (fn [arc-k] #(update % arc-k
+                                            (fn [[s e]] [(+ s (- start* cycle))
+                                                       ;; FIXME could improve because here the event ends before it should when ratio > 1
+                                                         (+ e (- start* cycle))])))
+            valid-onset? (fn [{[onset] :arc/active}]
+                           (and (>= onset start)
+                                (>= onset start*)))
+            new-events (concat
+                        events
+                        (->> (query value* [cycle (inc cycle)])
+                             (map (update-arc :arc/active))
+                              ;; FIXME this should be something else altogether
+                             (map (update-arc :arc/whole))
+                             (filter valid-onset?)))]
+
+        (cond
+          (>= start* end) events
+          (> end* end) new-events
+          :else (recur end* new-events))))))
 
 (defmethod query :slowcat
   [data query-arc]
   (slowcat data query-arc))
 
-(do
-  (defn slowcat2
-    [{:keys [value len]} query-arc]
-    (let [[start end ] query-arc]
-      (loop [start* (int start)
-             events []]
-        (let [i (mod start* len)
-              cycle (quot start* len)
-              value* (wrap-nth value (int i))
-              ratio (:ratio value* 1)
-              end* (+ ratio start*)
-              new-events (concat
-                           events
-                           (->> (query value* [cycle (inc cycle)])
-                                (map #(update % :arc/active
-                                              (fn [[s e]]
-                                                [(+ s (- start* cycle))
-                                                 ;; FIXME could improve because here the event ends before it should when ratio > 1
-                                                 (+ e (- start* cycle))])))
-                                (filter #(-> %
-                                             :arc/active
-                                             first
-                                             (>= start)))))]
-          (if (> end* end)
-            new-events
-            (recur end* new-events )))))
-
-    )
-
-  (map (juxt :value :arc/active (comp nil? :has-start?))
-       (slowcat2 {:pattern/type :slowcat
-                  :len 3
-                  :value [{:pattern/type :fastcat
-                           :value [{:pattern/type :atom :value "bd" :ratio 1}
-                                   {:pattern/type :atom :value "bd" :ratio 1}]}
-                          {:pattern/type :slow
-                           :ratio 2
-                           :speed 2
-                           :value {:pattern/type :atom :value "hh"}}
-                          #_{:pattern/type :atom :value "hh" :ratio 2}]}
-                 [0 10])))
-
-(query {:pattern/type :slow
-        :speed 2
-        :value {:pattern/type :atom :value
-                "hh"}}
-       [1 2])
-
 (defmethod query :fastcat
-  [data query-arc]
+  [{:keys [len] :as data} query-arc]
   (let [pats (:value data)]
     (fast {:speed (count pats)
            :value {:pattern/type :slowcat
+                   :len len
                    :value pats}}
           query-arc)))
 
@@ -208,6 +186,7 @@
   (query {:pattern/type :rotl
           :amount -1/4
           :value {:pattern/type :fastcat
+                  :len 3
                   :value [{:pattern/type :atom :value 1}
                           {:pattern/type :atom :value 2}]}}
          [0 1])

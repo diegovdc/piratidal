@@ -21,6 +21,7 @@
          (query {:pattern/type :fast
                  :speed 2
                  :value {:pattern/type :fastcat
+                         :len 3
                          :value [{:pattern/type :atom :value "bd"}
                                  {:pattern/type :atom :value "hh"}
                                  {:pattern/type :atom :value "cp"}]}}
@@ -33,16 +34,17 @@
          (query {:pattern/type :slow
                  :speed 2
                  :value {:pattern/type :fastcat
+                         :len 3
                          :value [{:pattern/type :atom :value "bd"}
                                  {:pattern/type :atom :value "hh"}
                                  {:pattern/type :atom :value "cp"}]}}
                 [0 2])))
   (testing "a single cycle"
-    (is (= [{:value "hh", :arc/whole [2/3 4/3], :arc/active [2/3 4/3] :has-start? false}
-            {:value "cp", :arc/whole [4/3 2N], :arc/active [4/3 2N]}]
+    (is (= [{:value "cp", :arc/whole [4/3 2N], :arc/active [4/3 2N]}]
            (query {:pattern/type :slow
                    :speed 2
                    :value {:pattern/type :fastcat
+                           :len 3
                            :value [{:pattern/type :atom :value "bd"}
                                    {:pattern/type :atom :value "hh"}
                                    {:pattern/type :atom :value "cp"}]}}
@@ -55,11 +57,13 @@
           {:value "cp", :arc/whole [2/3 1], :arc/active [2/3 1]}]
          (query {:pattern/type :speed
                  :value {:pattern/type :fastcat
+                         :len 3
                          :value [{:pattern/type :atom :value 2}
                                  {:pattern/type :atom :value 1}
                                  {:pattern/type :atom :value 1}]}
                  :speedable-pattern {:pattern/type :fast
                                      :value {:pattern/type :fastcat
+                                             :len 3
                                              :value [{:pattern/type :atom :value "bd"}
                                                      {:pattern/type :atom :value "hh"}
                                                      {:pattern/type :atom :value "cp"}]}}}
@@ -70,33 +74,36 @@
           {:value "hh", :arc/whole [1 2], :arc/active [1 2]}
           {:value "cp", :arc/whole [2 3], :arc/active [2 3]}]
          (query {:pattern/type :slowcat
+                 :len 3
                  :value [{:pattern/type :atom :value "bd"}
                          {:pattern/type :atom :value "hh"}
                          {:pattern/type :atom :value "cp"}]}
                 [0 3])))
   (testing "slightly shifted `query-arc`"
-    (is (= [{:value "hh", :arc/whole [1/3 2/3], :arc/active [1/3 2/3] :has-start? false}
-            {:value "cp", :arc/whole [2/3 1], :arc/active [2/3 1]}
+    (is (= [{:value "cp", :arc/whole [2/3 1], :arc/active [2/3 1]}
             {:value "bd", :arc/whole [1 4/3], :arc/active [1 4/3]}]
            (query {:pattern/type :fastcat
+                   :len 3
                    :value [{:pattern/type :atom :value "bd"}
                            {:pattern/type :atom :value "hh"}
                            {:pattern/type :atom :value "cp"}]}
                   [1/2 4/3])))))
+
 (deftest fastcat-test
   (is (= [{:value "bd", :arc/whole [0 1/3], :arc/active [0 1/3]}
           {:value "hh", :arc/whole [1/3 2/3], :arc/active [1/3 2/3]}
           {:value "cp", :arc/whole [2/3 1], :arc/active [2/3 1]}]
          (query {:pattern/type :fastcat
+                 :len 3
                  :value [{:pattern/type :atom :value "bd"}
                          {:pattern/type :atom :value "hh"}
                          {:pattern/type :atom :value "cp"}]}
                 [0 1])))
   (testing "slightly shifted `query-arc`"
-    (is (= [{:value "hh", :arc/whole [1/3 2/3], :arc/active [1/3 2/3], :has-start? false}
-            {:value "cp", :arc/whole [2/3 1], :arc/active [2/3 1]}
+    (is (= [{:value "cp", :arc/whole [2/3 1], :arc/active [2/3 1]}
             {:value "bd", :arc/whole [1 4/3], :arc/active [1 4/3]}]
            (query {:pattern/type :fastcat
+                   :len 3
                    :value [{:pattern/type :atom :value "bd"}
                            {:pattern/type :atom :value "hh"}
                            {:pattern/type :atom :value "cp"}]}
@@ -105,10 +112,10 @@
     (is (= [{:value "bd", :arc/whole [0N 1/3], :arc/active [0N 1/3]}
             {:value "bd", :arc/whole [1/3 2/3], :arc/active [1/3 1/2]}
             {:value "cp", :arc/whole [1/2 1], :arc/active [1/2 1]}
-            {:value "bd", :arc/whole [1N 4/3], :arc/active [1N 4/3]}
-            {:value "bd", :arc/whole [4/3 5/3], :arc/active [4/3 3/2]}
+            {:value "bd", :arc/whole [7/6 3/2], :arc/active [7/6 3/2]}
             {:value "cp", :arc/whole [3/2 2], :arc/active [3/2 2]}]
            (query {:pattern/type :fastcat
+                   :len 2
                    :value [{:pattern/type :fast
                             :value {:pattern/type :atom :value "bd"}
                             :speed 3/2}
@@ -190,6 +197,7 @@
          (remove-silences
           (query {:pattern/type :palindrome
                   :value {:pattern/type :fastcat
+                          :len 3
                           :value [{:pattern/type :atom :value "bd"}
                                   {:pattern/type :atom :value "cp"}
                                   {:pattern/type :atom :value "hh"}]}}

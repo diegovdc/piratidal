@@ -8,173 +8,184 @@
   [n arc]
   (map #(+ n %) arc))
 
-(do
-  (defn span-cycles
-    [[start end]]
-    (loop [b (int start)
-           spans []]
-      (let [e (inc-cycle b)]
-        (cond
-          (< end b) []
-          (= b end) spans
-          (> e end) (conj spans [b end])
-          :else (recur e (conj spans [b e]))))))
+(defn map-arc
+  [event arc-kw f]
+  (update event arc-kw #(map f %)))
 
-  #_(span-cycles [1/2 2]))
+(defn map-arcs
+  [f arc-kw events]
+  (map #(map-arc % arc-kw f) events))
+
+(defn span-cycles
+  [[start end]]
+  (loop [b (int start)
+         spans []]
+    (let [e (inc-cycle b)]
+      (cond
+        (< end b) []
+        (= b end) spans
+        (> e end) (conj spans [b end])
+        :else (recur e (conj spans [b e]))))))
+
 (defmulti query
-  (fn [data] (:pattern/type data)))
+  (fn [data _query-arc] (:pattern/type data :event)))
+
+(defn sam [n] (int n))
+
+(defn next-sam [n] (inc (sam n)))
 
 (defmethod query :atom
-  [{:keys [value query-arc]}]
+  [{:keys [value]} query-arc]
   (map (fn [active]
-         (let [whole-b (int (first active))
-               whole-e (inc whole-b)]
-           {:value value
-            ;; :arc/whole [whole-b whole-e]
-            :arc/active active}))
+         {:value value
+          :arc/whole [(sam (first active)) (next-sam (first active))]
+          :arc/active active})
        (span-cycles query-arc)))
 
-(do
-  (defn update-span-time
-    [timef arc]
-    (map timef arc))
+(defmethod query :event
+  ;; NOTE This might not be the best thing to do as an event is technically not a pattern
+  [data _query-arc]
+  data)
 
-  (defn update-event-time
-    [{:as event :keys [arc/active]} timef]
-    (assoc event :arc/active (map timef active)))
+(defn update-span-time
+  [timef arc]
+  (map timef arc))
 
-  (defn with-query-time
-    [pat timef arc]
-    (query (assoc pat :query-arc (update-span-time timef arc))))
+(defn update-event-time
+  [{:as event :keys [arc/active arc/whole]} timef]
+  (assoc event
+         :arc/whole (mapv timef whole)
+         :arc/active (mapv timef active)))
 
-  (defn fast [{:keys [speed value query-arc]}]
-    (-> value
-        (with-query-time #(* % speed) query-arc)
-        (->> (map (fn [ev] (update-event-time ev #(/ % speed)))))))
+(defn with-query-time
+  [pat timef arc]
+  (query pat (update-span-time timef arc)))
 
-  (defn slow [pattern-data]
-    (fast (update pattern-data :speed #(/ 1 %))))
+(defn fast [{:keys [speed value]} query-arc]
+  (-> value
+      (with-query-time #(* % speed) query-arc)
+      (->> (map (fn [ev]
+                  (let [ev* (update-event-time ev #(/ % speed))]
+                    (if (<= (first query-arc) (first (:arc/active ev*)))
+                      ev*
+                      (assoc ev* :has-start? false))))))))
 
-  (fast {:speed 3
-         :value {:pattern/type :atom :value "bd"}
-         :query-arc [0 1]})
-  (slow {:speed 3
-         :value {:pattern/type :atom :value "bd"}
-         :query-arc [0 9]}))
+(defn slow [pattern-data query-arc]
+  (fast (update pattern-data :speed #(/ 1 %))
+        query-arc))
 
 (defmethod query :fast
-  [pattern-data]
-  (fast pattern-data))
+  [pattern-data query-arc]
+  (fast pattern-data query-arc))
 
 (defmethod query :slow
-  [pattern-data]
-  (slow pattern-data))
+  [pattern-data query-arc]
+  (slow pattern-data query-arc))
 
-(do
-  (defn slowcat
-    [{:keys [value query-arc]}]
-    (->> value
-         (map-indexed
-          (fn [i pat]
-            (mapcat (fn [arc]
-                      (query (assoc pat :query-arc (inc-arc i arc))))
-                    (span-cycles query-arc))))
-         flatten))
+(defmethod query :speed
+  [{:keys [value speedable-pattern]} query-arc]
+  (mapcat (fn [{:keys [value arc/active]}]
+            (query (assoc speedable-pattern :speed value)
+                   active))
+          (query value query-arc)))
 
-  (defmethod query :slowcat
-    [data]
-    (slowcat data))
+(defn wrap-nth
+  [coll index]
+  (nth coll (mod index (count coll))))
 
-  (defmethod query :stack
-    [{:keys [query-arc] :as data}]
-    (let [[start] query-arc]
-      (mapcat
-       (fn [i arc]
-         (let [events (slowcat (assoc data :query-arc (inc-arc i arc)))
-               active-arcs (map :arc/active events)
-               min-active (apply min (map first active-arcs))
-               max-active (apply max (map second active-arcs))
-               ratio (- max-active min-active)]
-           (reduce
-            (fn [acc {:keys [arc/active] :as ev}]
-              (let [updated-arc (map #(/ % ratio) active)
-                    updated-ev (assoc ev :arc/active updated-arc)]
-                (cond
-                  (and (< (first updated-arc) start)
-                       (<= (second updated-arc) start))
-                  acc
+(defn slowcat
+  [{:keys [value]} query-arc]
+  (mapcat (fn [arc]
+            (let [v (wrap-nth value (first arc))
+                  events (query v arc)]
+              events))
+          (span-cycles query-arc)))
 
-                  (and (< (first updated-arc) start)
-                       (> (second updated-arc) start))
-                  (conj acc (assoc updated-ev :partial? true))
+(defmethod query :slowcat
+  [data query-arc]
+  (slowcat data query-arc))
 
-                  :else (conj acc updated-ev))))
-            []
-            events)))
-       (range)
-       (span-cycles query-arc))))
+(query {:pattern/type :slowcat
+        :value [{:pattern/type :atom :value "bd"}
+                {:pattern/type :atom :value "hh"}
+                {:pattern/type :atom :value "cp"}]}
+       [0 3])
 
-  #_(defn fastcat
-      [{:keys [value query-arc] :as data}]
-      (mapcat (fn [v]
-                (println v)
-                (fast {:speed (count value)
-                       :value (assoc v :pattern/type :atom)
-                       :query-arc query-arc}))
-              (slowcat data)))
+(defmethod query :fastcat
+  [data query-arc]
+  (let [pats (:value data)]
+    (fast {:speed (count pats)
+           :value {:pattern/type :slowcat
+                   :value pats}}
+          query-arc)))
 
-  #_(defmethod query :fastcat
-      [data]
-      (fastcat data))
+#_(do
+    (defmethod query :fast-gap
+      [{:keys [speed value] :as  data} query-arc]
+      (mapcat (fn [query-arc]
+                (-> value
+                    (with-query-time #(* % 1) query-arc)
+                    (->> (map (fn [ev]
+                                (let [ev* (update-event-time ev #(/ % 1))]
+                                  (if (<= (first query-arc) (first (:arc/active ev*)))
+                                    ev*
+                                    (assoc ev* :has-start? false))))))))
+              (span-cycles query-arc))
+      #_(query value query-arc)
+      #_(reduce (fn [acc {:keys [arc/active] :as ev}]
+                  (if (< (mod (first active) 1)
+                         (/ 1 speed))
+                    (conj acc ev)
+                    acc))
+                []
+                (fast data query-arc)))
+    (query {:pattern/type :fast-gap
+            :speed 2
+            :value {:pattern/type :fastcat
+                    :value [{:pattern/type :slowcat
+                             :value [{:pattern/type :atom :value "bd"}
+                                     {:pattern/type :atom :value "sd"}]}
+                            {:pattern/type :atom :value "hh"}
+                            {:pattern/type :atom :value "cp"}]}}
+           [1 2]))
 
-  (query {:pattern/type :stack
-          :value [{:pattern/type :slow
-                   :value {:pattern/type :atom :value "bd"}
-                   :speed 2}
-                  {:pattern/type :atom :value "cp"}]
-          :query-arc [0 2]})
-  #_(query {:pattern/type :fastcat
-            :value [{:pattern/type :atom :value "bd"}
-                    {:pattern/type :atom :value "cp"}]
-            :query-arc [0 1]})
-  #_(query {:pattern/type :fast
-            :value {:pattern/type :atom :value "bd"}
-            :speed 2}))
+(defmethod query :rotl
+  [{:keys [value amount]} query-arc]
+  (-> value
+      (with-query-time #(+ % amount) query-arc)
+      (->> (map (fn [ev] (update-event-time ev #(- % amount)))))))
 
+(defmethod query :rotr
+  [{:keys [amount] :as data} query-arc]
+  (query (assoc data
+                :pattern/type :rotl
+                :amount (* -1 amount))
+         query-arc))
 
-;then can use this like this:
+(comment
+  (query {:pattern/type :rotl
+          :amount -1/4
+          :value {:pattern/type :fastcat
+                  :value [{:pattern/type :atom :value 1}
+                          {:pattern/type :atom :value 2}]}}
+         [0 1])
+  (query {:pattern/type :rotr
+          :amount 1/3
+          :value {:pattern/type :fastcat
+                  :value [{:pattern/type :atom :value 1}
+                          {:pattern/type :atom :value 2}
+                          #_{:pattern/type :atom :value 3}
+                          #_{:pattern/type :atom :value 4}]}}
+         [0 2]))
 
+(defn starts-in-cycle?
+  [cycle [arc-start]]
+  (<= cycle arc-start))
 
-(query {:pattern/type :atom
-        :value        5
-        :query-arc    [1/2 2]})
-
-(query {:pattern/type :slow
-        :speed 2
-        :value {:pattern/type :atom
-                :value "bd"}
-        :query-arc [1 3]})
-
-(query {:pattern/type :fast
-        :speed 3
-        :value {:pattern/type :atom :value "bd"}
-        :query-arc [0 9]})
-
-{:pattern/type :cat
- :value [{:word "bd"} {:word "cp"}]}
-
-(do
-  (defn starts-in-cycle?
-    [cycle [arc-start]]
-    (<= cycle arc-start))
-  (starts-in-cycle? 1 [0 2]))
-
-(do
-  (defn ends-in-cycle?
-    [cycle [_ arc-end]]
-    (and (< cycle arc-end)
-         (<= arc-end (inc cycle))))
-  (ends-in-cycle? 0 [0 2]))
+(defn ends-in-cycle?
+  [cycle [_ arc-end]]
+  (and (< cycle arc-end)
+       (<= arc-end (inc cycle))))
 
 (defn arc-length
   [[start end]]
@@ -188,15 +199,32 @@
 
 (defn rev-event
   [current-cycle event]
-  (let [silence? (ends-in-cycle? current-cycle (:arc/active event))
+  (let [silence? (ends-in-cycle? current-cycle (:arc/whole event))
         reverse-arc (fn [[start end]]
                       (let [start* (mirror-point current-cycle end)
                             end* (mirror-point current-cycle start)]
                         [start* end*]))]
-    (cond-> event
-      :always (update :arc/active reverse-arc)
-      (not silence?) (assoc :value :silence
-                            :original-value (:value event)))))
+    (-> event
+        (update :arc/whole reverse-arc)
+        (update :arc/active reverse-arc)
+        (dissoc :has-start?)
+        (cond-> (not silence?) (assoc :value :silence
+                                      :original-value (:value event))))))
+
+(defmethod query :rev
+  [{:keys [value]} query-arc]
+  (mapcat (fn [query-arc*]
+            (reverse (map (partial rev-event (first query-arc*))
+                          (query value query-arc*))))
+          (span-cycles query-arc)))
+
+(defn silence?
+  [event]
+  (or (= :silence (:value event))
+      (not (:has-start? event true))))
+
+(defn remove-silences [events]
+  (remove silence? events))
 
 (do
   (defn odd-cycle? [cycle-arc]
@@ -206,8 +234,28 @@
     "Slow down the query-arc to repeat each cycle twice so that the odd one can be reversed"
     [query-arc]
     (map (fn [cycle-arc]
-           (let [start (int (/ (first cycle-arc) 2))
-                 arc [start (inc start)]]
-             arc))
-         (span-cycles query-arc)))
-  (palindrome-cycles [1/2 4]))
+           (let [cycle (first cycle-arc)
+                 start (int (/ cycle 2))]
+             {:cycle cycle :arc [start (inc start)]}))
+         (span-cycles query-arc))))
+
+(defn transpose-back-palindrome-event
+  [cycle ev]
+  (update ev :arc/active
+          (fn [[start end]]
+            (if (even? cycle)
+              (let [start* (* 2 start)]
+                [start* (+ start* (- end start))])
+              (let [start* (inc (* 2 start))]
+                [start* (+ start* (- end start))])))))
+
+(defmethod query :palindrome
+  [data query-arc]
+  (mapcat (fn [{:keys [cycle arc]}]
+            (map (partial transpose-back-palindrome-event cycle)
+                 (if (even? cycle)
+                   (query (:value data) arc)
+                   (query {:pattern/type :rev
+                           :value (:value data)}
+                          arc))))
+          (palindrome-cycles query-arc)))

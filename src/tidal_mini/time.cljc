@@ -191,8 +191,7 @@
           reverse-arc (fn [arc]
                         (let [[start end] arc
                               next-cycle (int (inc current-cycle))
-                              start* (max current-cycle
-                                          (- next-cycle end))
+                              start* (+ current-cycle (- next-cycle end))
                               end* (- next-cycle start)]
                           [(if ends-in-cycle?* start*
                                (max current-cycle start*))
@@ -202,16 +201,22 @@
         (not ends-in-cycle?*) (assoc :value :silence
                                      :original-value (:value event)))))
 
-  #_(rev-event 0 {:value "bd" :arc/active [0 1/2]})
+  (rev-event 0 {:value "bd" :arc/active [0 1/2]})
   ;; => {:value "bd", :arc/active [1/2 1]}
 
-  #_(rev-event 0 {:value "bd" :arc/active [0 1]})
+  (rev-event 0 {:value "bd" :arc/active [0 1]})
   ;; => {:value "bd", :arc/active [0 1]}
 
-  #_(rev-event 0 {:value "bd" :arc/active [0 1/2] :partial? true})
-  ;; => {:Value "bd", :arc/active [1/2 1], :partial? true}
+  (rev-event 0 {:value "bd" :arc/active [0 2]})
+  ;; => {:value :silence, :arc/active [0 1], :original-value "bd"}
+  ;; => {:value :silence, :arc/active [0 1], :original-value "bd"}
 
-  (rev-event 1 {:value "bd" :arc/active [0 2]}))
+  (rev-event 1 {:value "bd" :arc/active [0 2]})
+  ;; => {:value "bd", :arc/active [1 2]}
+
+  (rev-event 1 {:value "bd" :arc/active [0 3/2]})
+  ;; => {:value "bd", :arc/active [1 2]}
+  )
 
 (do
   (defn odd-cycle? [cycle-arc]
@@ -226,3 +231,4 @@
              arc))
          (span-cycles query-arc)))
   (palindrome-cycles [1/2 4]))
+

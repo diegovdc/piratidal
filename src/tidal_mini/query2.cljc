@@ -32,6 +32,18 @@
         (> e end) (conj spans [b end])
         :else (recur e (conj spans [b e]))))))
 
+(defn split-cycles
+  [[start end]]
+  (loop [start* start
+         end* (min end (int (math/ceil start)))
+         arcs []]
+    (let [arcs* (if (= start* end*)
+                  arcs
+                  (conj arcs [start* end*]))]
+      (cond
+        (= end end*) arcs*
+        :else (recur end* (min end (inc end*)) arcs*)))))
+
 (defmulti query
   (fn [data _query-arc] (:pattern/type data :event)))
 
@@ -125,18 +137,18 @@
                        {:origin-arc origin-arc
                         :target-arc target-arc
                         :events events})))))))
-  (comment)
-  (query {:pattern/type :fastgap
-          :speed 2
-          :value {:pattern/type :fastcat
-                  :len 3
-                  :value [{:pattern/type :atom :value "bd"}
-                          {:pattern/type :atom :value "hh"}
-                          {:pattern/type :slowcat
-                           :len 2
-                           :value [{:pattern/type :atom :value "cp"}
-                                   {:pattern/type :atom :value "sd"}]}]}}
-         [1/6 4/3]))
+  (comment
+    (query {:pattern/type :fastgap
+            :speed 2
+            :value {:pattern/type :fastcat
+                    :len 3
+                    :value [{:pattern/type :atom :value "bd"}
+                            {:pattern/type :atom :value "hh"}
+                            {:pattern/type :slowcat
+                             :len 2
+                             :value [{:pattern/type :atom :value "cp"}
+                                     {:pattern/type :atom :value "sd"}]}]}}
+           [1/6 4/3])))
 
 (defmethod query :timecat
   [{:keys [value]} query-arc]
@@ -204,16 +216,20 @@
                                             (fn [[s e]] [(+ s (- start* cycle))
                                                        ;; FIXME could improve because here the event ends before it should when ratio > 1
                                                          (+ e (- start* cycle))])))
-            valid-onset? (fn [{[onset] :arc/active}]
-                           (and (>= onset start)
-                                (>= onset start*)))
+            evaluate-onset-time (fn [{:as event
+                                      [onset] :arc/active}]
+                                  (let [has-start? (and (>= onset start)
+                                                        (>= onset start*))]
+                                    (if has-start?
+                                      event
+                                      (assoc event :has-start? false))))
             new-events (concat
                         events
                         (->> (query value* [cycle (inc cycle)])
                              (map (update-arc :arc/active))
                               ;; FIXME this should be something else altogether
                              (map (update-arc :arc/whole))
-                             (filter valid-onset?)))]
+                             (map evaluate-onset-time)))]
 
         (cond
           (>= start* end) events
@@ -353,18 +369,6 @@
                 :value [{:pattern/type :atom :value "bd"}
                         {:pattern/type :atom :value "cp"}]}}
        [0 1/2])
-
-(defn split-cycles
-  [[start end]]
-  (loop [start* start
-         end* (min end (int (math/ceil start)))
-         arcs []]
-    (let [arcs* (if (= start* end*)
-                  arcs
-                  (conj arcs [start* end*]))]
-      (cond
-        (= end end*) arcs*
-        :else (recur end* (min end (inc end*)) arcs*)))))
 
 (defmethod query :silence
   [_ query-arc]
@@ -635,3 +639,110 @@
                            :value (:value data)}
                           arc))))
           (palindrome-cycles query-arc)))
+
+(do
+  (defn event-onset [event]
+    (-> event :arc/active first))
+  (defn sort-events-by-onset [events]
+    (sort-by event-onset events))
+
+  (defn assoc-control
+    [event {:keys [value/type value] :as _ctl-event}]
+    (assoc event type value))
+
+  (defn update-control-pattern-event
+    "`new-events` are the events being updated, `events` are the remaining events to be updated"
+    [{:keys [new-events event ctl-event events]}]
+    (let [new-events (assoc new-events
+                            (dec (count new-events))
+                            (assoc-control event ctl-event))
+          next-event (first events)]
+      (if next-event
+        (conj new-events next-event)
+        new-events)))
+
+  (defn event-has-current-ctl-event-value?
+    [event ctl-event] (= (:value ctl-event)
+                         ((:value/type ctl-event) event)))
+
+  (defn control-pattern-query-done?
+    [{:keys [events ctl-events ctl-events-list]}]
+    (and (not (seq events))
+         (not (seq ctl-events))
+         (not (seq ctl-events-list))))
+
+  (defn control-pattern-query-single-cycle
+    [{:keys [value controls]} query-arc]
+    (let [ctl-events-list (map #(sort-events-by-onset (query % query-arc)) controls)
+          events (sort-events-by-onset (query value query-arc))
+          data {:new-events [(first events)]
+                :events (rest events)
+                :ctl-events-list (rest ctl-events-list)
+                :ctl-events (first ctl-events-list)}]
+
+      (loop [{:keys [new-events events ctl-events-list ctl-events] :as data} data]
+        (let [ctl-event (first ctl-events)
+              event (last new-events)
+              ctl-onset (event-onset ctl-event)
+              next-ctl-onset (event-onset (second ctl-events))
+              event-onset* (event-onset event)
+              next-ctl-events-set? (not (seq ctl-events))]
+          (cond
+            (control-pattern-query-done? data) new-events
+
+            next-ctl-events-set?
+            (recur {:new-events [(first new-events)]
+                    :events (rest new-events)
+                    :ctl-events-list (rest ctl-events-list)
+                    :ctl-events (first ctl-events-list)})
+
+            (event-has-current-ctl-event-value? event ctl-event)
+            (recur (assoc data :ctl-events (rest ctl-events)))
+
+            (and next-ctl-onset (<= next-ctl-onset event-onset*))
+            (recur (assoc data :ctl-events (rest ctl-events)))
+
+            (<= ctl-onset event-onset*)
+            (recur (assoc data
+                          :new-events (update-control-pattern-event
+                                       (assoc data
+                                              :event event
+                                              :ctl-event ctl-event))
+                          :events (rest events))))))))
+
+  (defmethod query :control-pattern
+    [data query-arc]
+    (mapcat (fn [query-arc]
+              (control-pattern-query-single-cycle data query-arc))
+            (split-cycles query-arc)))
+
+  (map #(select-keys % [:arc/active :gain :note])
+       (query {:pattern/type :control-pattern
+               :controls [{:pattern/type :slowcat
+                           :len 3
+                           :value [{:pattern/type :atom, :value 1 :value/type :gain}
+                                   {:pattern/type :atom, :value 2 :value/type :gain}
+                                   {:pattern/type :atom, :value 3 :value/type :gain}]}
+                          {:pattern/type :slow
+                           :speed 2
+                           :value {:pattern/type :fastcat
+                                   :len 3
+                                   :value [{:pattern/type :atom, :value 10 :value/type :note}
+                                           {:pattern/type :atom, :value 9 :value/type :note}
+                                           {:pattern/type :atom, :value 8 :value/type :note}]}}]
+               :value {:pattern/type :fastcat
+                       :len 4
+                       :value [{:pattern/type :atom, :value "arpy" :value/type :sound}
+                               {:pattern/type :atom, :value "arpy" :value/type :sound}
+                               {:pattern/type :atom, :value "arpy" :value/type :sound}
+                               {:pattern/type :atom, :value "arpy" :value/type :sound}]}}
+              [0 2])))
+
+(query {:pattern/type :slow
+        :speed 2
+        :value {:pattern/type :fastcat
+                :len 3
+                :value [{:pattern/type :atom, :value 10 :value/type :note}
+                        {:pattern/type :atom, :value 9 :value/type :note}
+                        {:pattern/type :atom, :value 8 :value/type :note}]}}
+       [1 2])

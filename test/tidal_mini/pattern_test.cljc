@@ -1,4 +1,4 @@
-(ns tidal-mini.query2-test
+(ns tidal-mini.pattern-test
   (:require
    [clojure.test :refer [deftest is testing]]
    [tidal-mini.query2

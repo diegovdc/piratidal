@@ -1,4 +1,4 @@
-(ns tidal-mini.query2
+(ns tidal-mini.pattern
   (:require
    [clojure.math :as math]
    [tidal-mini.euclidean-rhythm :refer [euclidean-rhythm]]

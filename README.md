@@ -32,168 +32,168 @@ Experimental Clojure port of [TidalCycles](https://github.com/tidalcycles/)
 - [x] stack
 - [x] sustain
 - [x] unDegradeBy
-- [] accelerate
-- [] all
-- [] anticipate
-- [] anticipateIn
-- [] append
-- [] arp
-- [] arpeggiate
-- [] bite
-- [] brak
-- [] chew
-- [] choose
-- [] choose
-- [] chooseby
-- [] chooseby
-- [] chop
-- [] chordList
-- [] chordTable
-- [] chunk
-- [] chunk'
-- [] clutch
-- [] clutchIn
-- [] compress
-- [] contrast
-- [] contrastBy
-- [] cycleChoose
-- [] discretise
-- [] echo
-- [] echoWith
-- [] euclidFull
-- [] euclidInv
-- [] every
-- [] every'
-- [] fastAppend
-- [] fastSqueeze
-- [] fastspread
-- [] fix
-- [] fix
-- [] fixRange
-- [] flatpat
-- [] foldEvery
-- [] fromList
-- [] ~fromMaybes~
-- [] getScale
-- [] ghost
-- [] ghost'
-- [] ghostWith
-- [] grain
-- [] grain'
-- [] histpan
-- [] hurry
-- [] ifp
-- [] ifp
-- [] inhabit
-- [] inside
-- [] interpolate
-- [] interpolateIn
-- [] irand
-- [] iter
-- [] iter'
-- [] jump
-- [] jumpIn
-- [] jumpIn'
-- [] jumpMod
-- [] juxBy
-- [] lindenmayer
-- [] linger
-- [] listToPat
-- [] loopAt
-- [] loopFirst
-- [] mask
-- [] mt
-- [] mtrigger
-- [] off
-- [] once
-- [] outside
-- [] overlay
-- [] perlin
-- [] perlin2
-- [] perlin2With
-- [] perlinWith
-- [] pickF
-- [] ply
-- [] press
-- [] pressBy
-- [] qt
-- [] qtrigger
-- [] quantise
-- [] rand
-- [] randcat
-- [] randslice
-- [] range
-- [] rangex
-- [] resetCycles
-- [] rolled
-- [] rolledBy
-- [] run
-- [] scale
-- [] scaleList
-- [] scaleTable
-- [] scan
-- [] scramble
-- [] segment
-- [] select
-- [] selectF
-- [] seqP
-- [] seqPLoop
-- [] setcps
-- [] sew
-- [] shuffle
-- [] sig
-- [] slice
-- [] slowSqueeze
-- [] slowstripe
-- [] smash
-- [] smash'
-- [] spin
-- [] splice
-- [] spread
-- [] spreadChoose
-- [] spreadf
-- [] squeeze
-- [] step
-- [] step'
-- [] steps
-- [] stitch
-- [] stretch
-- [] striate
-- [] striateBy
-- [] stripe
-- [] struct
-- [] stut
-- [] stutWith
-- [] stutter
-- [] superimpose
-- [] swing
-- [] swingBy
-- [] timeCat
-- [] timescale
-- [] timescalewin
-- [] toScale
-- [] trigger
-- [] triggerWith
-- [] trunc
-- [] unfix
-- [] unit
-- [] ur
-- [] wait
-- [] waitT
-- [] wash
-- [] washIn
-- [] wchoose
-- [] wchoose
-- [] wchooseby
-- [] wchooseby
-- [] weave
-- [] weaveWith
-- [] wedge
-- [] when
-- [] whenT
-- [] whenmod
-- [] within
-- [] wrandcat
-- [] xfade
-- [] xfadeIn
-- [] zoom
+- [ ] accelerate
+- [ ] all
+- [ ] anticipate
+- [ ] anticipateIn
+- [ ] append
+- [ ] arp
+- [ ] arpeggiate
+- [ ] bite
+- [ ] brak
+- [ ] chew
+- [ ] choose
+- [ ] choose
+- [ ] chooseby
+- [ ] chooseby
+- [ ] chop
+- [ ] chordList
+- [ ] chordTable
+- [ ] chunk
+- [ ] chunk'
+- [ ] clutch
+- [ ] clutchIn
+- [ ] compress
+- [ ] contrast
+- [ ] contrastBy
+- [ ] cycleChoose
+- [ ] discretise
+- [ ] echo
+- [ ] echoWith
+- [ ] euclidFull
+- [ ] euclidInv
+- [ ] every
+- [ ] every'
+- [ ] fastAppend
+- [ ] fastSqueeze
+- [ ] fastspread
+- [ ] fix
+- [ ] fix
+- [ ] fixRange
+- [ ] flatpat
+- [ ] foldEvery
+- [ ] fromList
+- [ ] ~fromMaybes~
+- [ ] getScale
+- [ ] ghost
+- [ ] ghost'
+- [ ] ghostWith
+- [ ] grain
+- [ ] grain'
+- [ ] histpan
+- [ ] hurry
+- [ ] ifp
+- [ ] ifp
+- [ ] inhabit
+- [ ] inside
+- [ ] interpolate
+- [ ] interpolateIn
+- [ ] irand
+- [ ] iter
+- [ ] iter'
+- [ ] jump
+- [ ] jumpIn
+- [ ] jumpIn'
+- [ ] jumpMod
+- [ ] juxBy
+- [ ] lindenmayer
+- [ ] linger
+- [ ] listToPat
+- [ ] loopAt
+- [ ] loopFirst
+- [ ] mask
+- [ ] mt
+- [ ] mtrigger
+- [ ] off
+- [ ] once
+- [ ] outside
+- [ ] overlay
+- [ ] perlin
+- [ ] perlin2
+- [ ] perlin2With
+- [ ] perlinWith
+- [ ] pickF
+- [ ] ply
+- [ ] press
+- [ ] pressBy
+- [ ] qt
+- [ ] qtrigger
+- [ ] quantise
+- [ ] rand
+- [ ] randcat
+- [ ] randslice
+- [ ] range
+- [ ] rangex
+- [ ] resetCycles
+- [ ] rolled
+- [ ] rolledBy
+- [ ] run
+- [ ] scale
+- [ ] scaleList
+- [ ] scaleTable
+- [ ] scan
+- [ ] scramble
+- [ ] segment
+- [ ] select
+- [ ] selectF
+- [ ] seqP
+- [ ] seqPLoop
+- [ ] setcps
+- [ ] sew
+- [ ] shuffle
+- [ ] sig
+- [ ] slice
+- [ ] slowSqueeze
+- [ ] slowstripe
+- [ ] smash
+- [ ] smash'
+- [ ] spin
+- [ ] splice
+- [ ] spread
+- [ ] spreadChoose
+- [ ] spreadf
+- [ ] squeeze
+- [ ] step
+- [ ] step'
+- [ ] steps
+- [ ] stitch
+- [ ] stretch
+- [ ] striate
+- [ ] striateBy
+- [ ] stripe
+- [ ] struct
+- [ ] stut
+- [ ] stutWith
+- [ ] stutter
+- [ ] superimpose
+- [ ] swing
+- [ ] swingBy
+- [ ] timeCat
+- [ ] timescale
+- [ ] timescalewin
+- [ ] toScale
+- [ ] trigger
+- [ ] triggerWith
+- [ ] trunc
+- [ ] unfix
+- [ ] unit
+- [ ] ur
+- [ ] wait
+- [ ] waitT
+- [ ] wash
+- [ ] washIn
+- [ ] wchoose
+- [ ] wchoose
+- [ ] wchooseby
+- [ ] wchooseby
+- [ ] weave
+- [ ] weaveWith
+- [ ] wedge
+- [ ] when
+- [ ] whenT
+- [ ] whenmod
+- [ ] within
+- [ ] wrandcat
+- [ ] xfade
+- [ ] xfadeIn
+- [ ] zoom

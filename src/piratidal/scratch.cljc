@@ -1,6 +1,7 @@
 (ns piratidal.scratch
   (:require [clojure.core]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [piratidal.pattern :refer [query]]))
 
 (defn +dispatcher
   [& xs]
@@ -239,3 +240,27 @@
 - [] ur
 - [] seqP
 - [] seqPLoop"
+
+
+
+
+
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+
+
+(query {:pattern/type :fastcat
+        :len 2
+        :value
+        [{:pattern/type :atom, :value "bd"}
+         {:pattern/type :stack
+          :value
+          [{:pattern/type :fastcat
+            :len 3
+            :value
+            [{:pattern/type :atom, :value "bd"}
+             {:pattern/type :atom, :value "sn"}
+             {:pattern/type :atom, :value "hh"}]}]}]}
+       [0 1])

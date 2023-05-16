@@ -2,9 +2,7 @@
   (:require
    [clojure.edn :as edn]
    [instaparse.core :as insta]
-   [instaparse.transform :as insta-trans]
-   [piratidal.euclidean-rhythm :refer [euclidean-rhythm]]
-   [piratidal.utils :refer [rotate]]))
+   [instaparse.transform :as insta-trans]))
 
 (def tidal-pattern-grammar
   #?(:clj (slurp "src/piratidal/tidal.grammar")
@@ -25,54 +23,74 @@
       (println (insta/get-failure parsed-data))
       parsed-data)))
 
+(defn make-fastcat
+  [& xs]
+  {:pattern/type :fastcat
+   ;; ::tag tag
+   :len (count xs) ;; FIXME this must be more sofisticated
+   :value (into [] xs)})
+
+(defn make-slowcat [xs]
+  {:pattern/type :slowcat
+   :len (count xs) ;; TODO improve, need sofistication
+   :value xs})
+
+(defn make-atom [x]
+  {:pattern/type :atom :value x})
+
 (defn transform-tree
   [parse-tree]
   (insta-trans/transform
    {:pattern identity
-    :cat (fn [& xs]
-           (reduce
-            (fn [acc pat]
-              (cond
-                (:replicate pat) (into [] (concat acc (:replicate pat)))
-                (:euclidean pat) (into [] (concat acc (:euclidean pat)))
-                :else (conj acc pat)))
-            []
-            xs))
-    :word (fn [x] {:word x})
-    :sample (fn [& [{:keys [word]} [_ n]]]
-              {:sample word :n n})
+    ;; TODO rename :cat, should be :fastcat
+    :fastcat make-fastcat
+
+    :word make-atom
+    :sample (fn [& [value [_ n]]]
+              (assoc value :n n))
+    ;; TODO These to below should parse into a :pattern/type :atom
     :int (fn [int-str] (int (edn/read-string int-str)))
     :float (fn [float-str]
              (double (edn/read-string float-str)))
     :degrade-amount (fn [float-str]
                       (double (edn/read-string float-str)))
-    :silence (constantly :silence)
-    :group vector
-    :stack (fn [& xs] {:stack (into [] xs)})
-    :slowcat (fn [& xs] {:slowcat (into [] xs)})
+    :silence (fn [_] {:pattern/type :atom :value :silence})
+    :group identity
+    :stack (fn [& xs] {:pattern/type :stack :value (into [] xs)})
+    :slowcat (fn [& xs]
+               (if (= 1 (count xs))
+                 (make-slowcat (first xs))
+                 {:pattern/type :stack
+                  :value (mapv make-slowcat xs)}))
+    :slowcat-token (fn [& xs] (vec xs))
     :fast (fn [x [_ speed]]
-            {:fast x
+            {:pattern/type :fast
+             :value x
              :speed speed})
     :slow (fn [x [_ speed]]
-            {:slow x
+            {:pattern/type :slow
+             :value x
              :speed speed})
     :replicate (fn [pat [_ times]]
                  {:replicate (repeat times pat)})
     :polymeter (fn [& [stack [_ steps]]]
-                 {:polymeter stack
-                  :steps (or steps (->> stack :stack (map count) (apply max)))})
+                 (let [value (->> stack :value (mapv :value))]
+                   {:pattern/type :polymeter
+                    :value value
+                    :len (or steps (apply max (map count value)))}))
     :degrade (fn [& [stack [_ amount]]]
-               {:degrade stack
-                :amount (or amount 0.5)})
+               {:pattern/type :degrade-by
+                :value stack
+                :probability (or amount 0.5)})
     :elongate (fn [& [pat [_ n]]]
                 {:elongated pat
                  :size n})
-    :euclidean (fn [& [pat [_ pulses steps phase]]]
-                 {:euclidean (-> (euclidean-rhythm pulses steps)
-                                 (rotate (or phase 0))
-                                 (->> (map (fn [play?]
-                                             (if-not (zero? play?)
-                                               pat :silence)))))})}
+    :euclidean (fn [& [value [_ pulses steps rotation]]]
+                 {:pattern/type :euclidean
+                  :value value
+                  :pulses pulses
+                  :steps steps
+                  :rotation (or rotation 0)})}
    parse-tree))
 
 (def parse-pattern (comp transform-tree parse-tidal))

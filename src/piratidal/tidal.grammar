@@ -1,9 +1,9 @@
 (* The pattern *)
-pattern = cat (<ws> <'.'> <ws> cat)*
+pattern = fastcat (<ws> <'.'> <ws> fastcat)*
 
 (* Basic types *)
 ws = #"\s+"
-word = #"[a-zA-Z0-9]([a-zA-Z0-9]*)"
+word = #"[a-zA-Z]([a-zA-Z0-9]*)"
 int = #"[0-9]+"
 float = (!'?' #"\d+(\.\d+)")
 silence = "~"
@@ -11,10 +11,11 @@ silence = "~"
 <token> = word | sample | int | float | silence | fast | group | slowcat | slow | polymeter | elongate | replicate | euclidean | choose | degrade
 
 (* Pattern structures *)
-cat = token (<ws>? token)*
+fastcat = token (<ws>? token)*
 stack = pattern (comma pattern)*
 group = <#'\['> stack <#'\]'>
-slowcat = <#'\<'> stack <#'\>'>
+slowcat-token = token (<ws>? token)*
+slowcat = <#'\<'> slowcat-token (comma slowcat-token)* <#'\>'>
 polymeter = <#'\{'> stack <#'\}'> polymeter-steps?
 polymeter-steps = <'%'> int
 

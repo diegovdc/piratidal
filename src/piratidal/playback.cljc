@@ -1,11 +1,11 @@
-(ns tidal-mini.playback
+(ns piratidal.playback
   (:require
    [overtone.at-at :refer [now]]
    [overtone.music.time :refer [apply-at]]
-   [tidal-mini.control-patterns :refer [gain note]]
-   [tidal-mini.parser :refer [parse-pattern]]
-   [tidal-mini.query :refer [query]]
-   [tidal-mini.superdirt :as sd]
+   [piratidal.control-patterns :refer [gain note]]
+   [piratidal.parser :refer [parse-pattern]]
+   [piratidal.query :refer [query]]
+   [piratidal.superdirt :as sd]
    [time-time.dynacan.players.gen-poly :as gp]))
 
 (defonce cps (atom 90/60)) ; 120 bpm

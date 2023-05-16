@@ -1,5 +1,5 @@
-(ns tidal-mini.polymeter
-  (:require [tidal-mini.utils :refer [wrap-at]]))
+(ns piratidal.polymeter
+  (:require [piratidal.utils :refer [wrap-at]]))
 
 (defn polymeter-step-at-cycle&index
   "Calculate the number of times a current step has been seen in the polymeter. For debugging purposes will return a map wit the value-index and the times-seen

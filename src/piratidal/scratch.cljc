@@ -1,4 +1,4 @@
-(ns tidal-mini.scratch
+(ns piratidal.scratch
   (:require [clojure.core]
             [clojure.string :as str]))
 

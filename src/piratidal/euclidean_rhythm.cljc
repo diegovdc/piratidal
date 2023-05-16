@@ -1,4 +1,4 @@
-(ns tidal-mini.euclidean-rhythm
+(ns piratidal.euclidean-rhythm
   "Generate euclidean rhythm vectors with bjorklunds algorithm. Taken from `overtone.algo.euclidean-rhythm`")
 
 (defn- build [level counts remainders]

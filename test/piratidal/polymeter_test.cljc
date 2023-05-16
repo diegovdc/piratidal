@@ -1,7 +1,7 @@
-(ns tidal-mini.polymeter-test
+(ns piratidal.polymeter-test
   (:require
    [clojure.test :refer [deftest is testing]]
-   [tidal-mini.polymeter
+   [piratidal.polymeter
     :refer
     [polymeter->stack polymeter-step-at-cycle&index]]))
 

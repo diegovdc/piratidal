@@ -1,4 +1,4 @@
-(ns tidal-mini.superdirt
+(ns piratidal.superdirt
   (:require [overtone.osc :as osc]))
 
 (defonce osc-client (atom nil))

@@ -4,7 +4,7 @@
    [clojure.test :refer [deftest is testing]]
    [piratidal.query
     :refer [extend-arc query take-slow-segment translate-arc]]
-   [tidal-mini.parser :refer [parse-pattern]]))
+   [piratidal.parser :refer [parse-pattern]]))
 
 (deftest translate-arc-test
   (is (= [1/4 1/2]

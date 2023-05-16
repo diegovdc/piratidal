@@ -2,10 +2,10 @@
   ;; DEPRECATED only a proof of concept
   (:require
    [clojure.math :as math]
-   [tidal-mini.control-patterns :refer [apply-ctl-pattern]]
-   [tidal-mini.parser :refer [parse-pattern]]
-   [tidal-mini.polymeter :refer [polymeter->stack]]
-   [tidal-mini.utils :refer [wrap-at]]))
+   [piratidal.control-patterns :refer [apply-ctl-pattern]]
+   [piratidal.parser :refer [parse-pattern]]
+   [piratidal.polymeter :refer [polymeter->stack]]
+   [piratidal.utils :refer [wrap-at]]))
 
 (defn pattern-length
   [pattern]

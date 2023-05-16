@@ -1,7 +1,7 @@
-(ns tidal-mini.pattern-test
+(ns piratidal.pattern-test
   (:require
    [clojure.test :refer [deftest is testing]]
-   [tidal-mini.query2
+   [piratidal.pattern
     :refer
     [palindrome-cycles query remove-silences rev-event]]))
 

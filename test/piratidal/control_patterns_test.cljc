@@ -1,9 +1,9 @@
-(ns tidal-mini.control-patterns-test
+(ns piratidal.control-patterns-test
   (:require
    [clojure.test :refer [deftest is testing]]
-   [tidal-mini.control-patterns :refer [gain note palindrome rev slow]]
-   [tidal-mini.parser :refer [parse-pattern]]
-   [tidal-mini.query :refer [query]]))
+   [piratidal.control-patterns :refer [gain note palindrome rev slow]]
+   [piratidal.parser :refer [parse-pattern]]
+   [piratidal.query :refer [query]]))
 
 (defn pat->schedule2
   [pattern cycles]

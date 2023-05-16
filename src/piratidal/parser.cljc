@@ -1,13 +1,13 @@
-(ns tidal-mini.parser
+(ns piratidal.parser
   (:require
    [clojure.edn :as edn]
    [instaparse.core :as insta]
    [instaparse.transform :as insta-trans]
-   [tidal-mini.euclidean-rhythm :refer [euclidean-rhythm]]
-   [tidal-mini.utils :refer [rotate]]))
+   [piratidal.euclidean-rhythm :refer [euclidean-rhythm]]
+   [piratidal.utils :refer [rotate]]))
 
 (def tidal-pattern-grammar
-  #?(:clj (slurp "src/tidal_mini/tidal.grammar")
+  #?(:clj (slurp "src/piratidal/tidal.grammar")
      ;; FIXME cljs needs to get the grammar somehow
      :cljs (throw (ex-info "Implement loading the grammar in JS" {}))))
 

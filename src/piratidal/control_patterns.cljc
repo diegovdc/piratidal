@@ -1,8 +1,8 @@
-(ns tidal-mini.control-patterns
+(ns piratidal.control-patterns
   (:require
    [clojure.core :as math]
    [helins.interval.map :as imap]
-   [tidal-mini.parser :refer [parse-pattern]]))
+   [piratidal.parser :refer [parse-pattern]]))
 
 (comment
   ;; interval-usage
@@ -205,8 +205,8 @@
     {:value :silence, :arc [2/3 4/3], :cycle 2}]))
 
 (comment
-  (require '[tidal-mini.parser :as p]
-           '[tidal-mini.schedule :as sch])
+  (require '[piratidal.parser :as p]
+           '[piratidal.schedule :as sch])
   (sch/pat->schedule2 (p/parse-pattern "[bd ~ ~]/2")
                       (range 3)))
 
@@ -231,5 +231,5 @@
  [{:word "a"} :silence {:word "b"}])
 
 (comment
-  (require '[tidal-mini.parser :refer [parse-pattern]])
+  (require '[piratidal.parser :refer [parse-pattern]])
   (parse-pattern "1 <2 1> 3"))

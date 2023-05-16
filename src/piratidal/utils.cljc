@@ -1,4 +1,4 @@
-(ns tidal-mini.utils)
+(ns piratidal.utils)
 
 (defn rotate [a n]
   (let [l (count a)

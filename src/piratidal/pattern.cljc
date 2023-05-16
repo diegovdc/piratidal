@@ -1,9 +1,9 @@
-(ns tidal-mini.pattern
+(ns piratidal.pattern
   (:require
    [clojure.math :as math]
-   [tidal-mini.euclidean-rhythm :refer [euclidean-rhythm]]
-   [tidal-mini.time :refer [apply-pat-to-pat-both]]
-   [tidal-mini.utils :refer [rotate]]))
+   [piratidal.euclidean-rhythm :refer [euclidean-rhythm]]
+   [piratidal.time :refer [apply-pat-to-pat-both]]
+   [piratidal.utils :refer [rotate]]))
 
 (defn inc-cycle
   [n]

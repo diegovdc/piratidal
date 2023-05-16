@@ -1,4 +1,4 @@
-(ns tidal-mini.time)
+(ns piratidal.time)
 
 (defn sect
   "Simple intersection of two arcs

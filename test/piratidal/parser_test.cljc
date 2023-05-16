@@ -1,7 +1,7 @@
-(ns tidal-mini.parser-test
+(ns piratidal.parser-test
   (:require
    [clojure.test :refer [deftest is testing]]
-   [tidal-mini.parser :refer [parse-tidal transform-tree]]))
+   [piratidal.parser :refer [parse-tidal transform-tree]]))
 
 (deftest parse-tidal-test
   (testing

@@ -1,6 +1,6 @@
 # Piratidal
 
-Experimental Clojure port of [TidalCycles](https://github.com/tidalcycles/)
+Experimental Clojure port of [TidalCycles](https://github.com/tidalcycles/). This is a very early work in progress and more of a proof of concept.
 
 ## Tidal's API Implemented So Far
 

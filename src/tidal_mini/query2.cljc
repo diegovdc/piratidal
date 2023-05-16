@@ -1,7 +1,9 @@
 (ns tidal-mini.query2
   (:require
    [clojure.math :as math]
-   [tidal-mini.time :refer [apply-pat-to-pat-both]]))
+   [tidal-mini.euclidean-rhythm :refer [euclidean-rhythm]]
+   [tidal-mini.time :refer [apply-pat-to-pat-both]]
+   [tidal-mini.utils :refer [rotate]]))
 
 (defn inc-cycle
   [n]
@@ -232,6 +234,14 @@
                    :value pats}}
           query-arc)))
 
+(query
+ {:pattern/type :fastcat
+  :len 3
+  :value
+  [{:pattern/type :atom, :value "bd"}
+   {:pattern/type :atom, :value "cp"}]}
+ [0 1])
+
 (defmethod query :stack
   [data query-arc]
   (->> data :value
@@ -239,12 +249,62 @@
        ;; sorting may not be necessary, but it makes testing easier
        #_(sort-by (comp first :arc/active))))
 
-#_(query
-   {:pattern/type :fastcat
-    :value
-    [{:pattern/type :atom, :value "bd"}
-     {:pattern/type :atom, :value "cp"}]}
-   [0 1])
+(defmethod query :polymeter
+  ;; NOTE: value is actually a vector of pattern vectors
+  [{:keys [value len]} query-arc]
+  (let [query-value (fn [arc index value*]
+                      (query {:pattern/type :fastcat
+                              :len len
+                              :value (map #(wrap-nth value* %)
+                                          (range index (+ len index)))}
+                             arc))]
+    (->> (split-cycles query-arc)
+         (mapcat (fn [arc]
+                   (let [[start] arc
+                         index (* (int start) len)]
+                     (mapcat #(query-value arc index %) value)))))))
+
+(sort-by (comp first :arc/active)
+         (query {:pattern/type :polymeter
+                 :len 2
+                 :value [[{:pattern/type :atom, :value "bd" :value/type :sound}
+                          {:pattern/type :atom, :value "cp" :value/type :sound}]
+                         [{:pattern/type :slowcat
+                           :len 2
+                           :value [{:pattern/type :atom, :value "a" :value/type :sound}
+                                   {:pattern/type :atom, :value "A" :value/type :sound}]}
+                          {:pattern/type :atom, :value "b" :value/type :sound}
+                          {:pattern/type :atom, :value "c" :value/type :sound}]]}
+                [1/2 2]))
+
+(defmethod query :euclidean
+  [{:keys [value pulses steps rotation]
+    :or {rotation 0}}
+   query-arc]
+  (query {:pattern/type :fastcat
+          :len steps
+          :value (map (fn [pulse]
+                        (if (zero? pulse)
+                          {:pattern/type :atom, :value :silence :value/type :sound}
+                          value))
+                      (rotate (euclidean-rhythm pulses steps) rotation))}
+         query-arc))
+
+(map (juxt :value :arc/active)
+     (query {:pattern/type :euclidean
+             :pulses 3
+             :steps 8
+             :rotation 0
+             :value {:pattern/type :slowcat
+                     :len 2
+                     :value [{:pattern/type :fastcat
+                              :len 2
+                              :value [{:pattern/type :atom, :value "cp" :value/type :sound}
+                                      {:pattern/type :slow
+                                       :speed 2
+                                       :value {:pattern/type :atom, :value "sd" :value/type :sound}}]}
+                             {:pattern/type :atom, :value "bd" :value/type :sound}]}}
+            [0 3]))
 
 (defmethod query :layer
   [{:keys [value fs]} query-arc]

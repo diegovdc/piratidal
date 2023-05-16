@@ -1,11 +1,10 @@
-(ns tidal-mini.query-test
+(ns piratidal.query-test
   (:require
    [clojure.string :as str]
    [clojure.test :refer [deftest is testing]]
-   [tidal-mini.parser :refer [parse-pattern]]
-   [tidal-mini.query
-    :refer
-    [extend-arc query take-slow-segment translate-arc]]))
+   [piratidal.query
+    :refer [extend-arc query take-slow-segment translate-arc]]
+   [tidal-mini.parser :refer [parse-pattern]]))
 
 (deftest translate-arc-test
   (is (= [1/4 1/2]

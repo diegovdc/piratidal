@@ -1,4 +1,4 @@
-(ns tidal-mini.query
+(ns piratidal.query
   ;; DEPRECATED only a proof of concept
   (:require
    [clojure.math :as math]

@@ -1,4 +1,5 @@
 (ns tidal-mini.query
+  ;; DEPRECATED only a proof of concept
   (:require
    [clojure.math :as math]
    [tidal-mini.control-patterns :refer [apply-ctl-pattern]]

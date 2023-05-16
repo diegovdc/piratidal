@@ -113,42 +113,29 @@
 
 (def event-summary (juxt :value :arc/active (comp nil? :has-start?)))
 
-(do
-  (defn filter-events-in-arc
-    [[arc-start arc-end] events]
-    (filter (fn [{[start] :arc/active}]
-              (and (>= start arc-start)
-                   (< start arc-end)))
-            events))
-  (declare split-cycles transpose-events-into-arc)
+(defn filter-events-in-arc
+  [[arc-start arc-end] events]
+  (filter (fn [{[start] :arc/active}]
+            (and (>= start arc-start)
+                 (< start arc-end)))
+          events))
+(declare split-cycles transpose-events-into-arc)
 
-  (defmethod query :fastgap
-    [{:keys [value speed]} query-arc]
-    (->> (split-cycles query-arc)
-         (mapcat (fn [[start end]]
-                   (let [cycle (int start)
-                         target-arc-end  (+ cycle (/ 1 speed))
-                         target-arc [cycle target-arc-end]
-                         origin-arc [cycle (inc cycle)]
-                         events (query value origin-arc)]
-                     (filter-events-in-arc
-                      [start (min end target-arc-end)]
-                      (transpose-events-into-arc
-                       {:origin-arc origin-arc
-                        :target-arc target-arc
-                        :events events})))))))
-  (comment
-    (query {:pattern/type :fastgap
-            :speed 2
-            :value {:pattern/type :fastcat
-                    :len 3
-                    :value [{:pattern/type :atom :value "bd"}
-                            {:pattern/type :atom :value "hh"}
-                            {:pattern/type :slowcat
-                             :len 2
-                             :value [{:pattern/type :atom :value "cp"}
-                                     {:pattern/type :atom :value "sd"}]}]}}
-           [1/6 4/3])))
+(defmethod query :fastgap
+  [{:keys [value speed]} query-arc]
+  (->> (split-cycles query-arc)
+       (mapcat (fn [[start end]]
+                 (let [cycle (int start)
+                       target-arc-end  (+ cycle (/ 1 speed))
+                       target-arc [cycle target-arc-end]
+                       origin-arc [cycle (inc cycle)]
+                       events (query value origin-arc)]
+                   (filter-events-in-arc
+                    [start (min end target-arc-end)]
+                    (transpose-events-into-arc
+                     {:origin-arc origin-arc
+                      :target-arc target-arc
+                      :events events})))))))
 
 (defmethod query :timecat
   [{:keys [value]} query-arc]
@@ -181,24 +168,6 @@
   ;; prevent division by `0` by returning `0` even if it's not mathematically correct ¯\_(ツ)_/¯
   (let [safe-div (fn [a b] (if (zero? b) 0 (/ a b)))]
     (make-apply-query safe-div op-pattern value query-arc)))
-
-(comment
-  (map (juxt :value :arc/active)
-       (remove-silences
-        (query {:pattern/type :*
-                :op-pattern {:pattern/type :fastcat
-                             :len 2
-                             :value [{:pattern/type :atom :value/type :note :value 1}
-                                     {:pattern/type :atom :value/type :note :value 1}]}
-                :value {:pattern/type :fastcat
-                        :len 3
-                        :value [{:pattern/type :atom :value 1 :value/type :note}
-                                {:pattern/type :atom :value 2 :value/type :note}
-                                {:pattern/type :slowcat
-                                 :len 2
-                                 :value [{:pattern/type :atom :value 3 :value/type :note}
-                                         {:pattern/type :atom :value 4 :value/type :note}]}]}}
-               [0 4]))))
 
 (defn slowcat
   ;; TODO, test how this works when starting at spans different from 0 and perhaps a few cycles afterwards
@@ -250,14 +219,6 @@
                    :value pats}}
           query-arc)))
 
-(query
- {:pattern/type :fastcat
-  :len 3
-  :value
-  [{:pattern/type :atom, :value "bd"}
-   {:pattern/type :atom, :value "cp"}]}
- [0 1])
-
 (defmethod query :stack
   [data query-arc]
   (->> data :value
@@ -280,19 +241,6 @@
                          index (* (int start) len)]
                      (mapcat #(query-value arc index %) value)))))))
 
-(sort-by (comp first :arc/active)
-         (query {:pattern/type :polymeter
-                 :len 2
-                 :value [[{:pattern/type :atom, :value "bd" :value/type :sound}
-                          {:pattern/type :atom, :value "cp" :value/type :sound}]
-                         [{:pattern/type :slowcat
-                           :len 2
-                           :value [{:pattern/type :atom, :value "a" :value/type :sound}
-                                   {:pattern/type :atom, :value "A" :value/type :sound}]}
-                          {:pattern/type :atom, :value "b" :value/type :sound}
-                          {:pattern/type :atom, :value "c" :value/type :sound}]]}
-                [1/2 2]))
-
 (defmethod query :euclidean
   [{:keys [value pulses steps rotation]
     :or {rotation 0}}
@@ -306,69 +254,29 @@
                       (rotate (euclidean-rhythm pulses steps) rotation))}
          query-arc))
 
-(map (juxt :value :arc/active)
-     (query {:pattern/type :euclidean
-             :pulses 3
-             :steps 8
-             :rotation 0
-             :value {:pattern/type :slowcat
-                     :len 2
-                     :value [{:pattern/type :fastcat
-                              :len 2
-                              :value [{:pattern/type :atom, :value "cp" :value/type :sound}
-                                      {:pattern/type :slow
-                                       :speed 2
-                                       :value {:pattern/type :atom, :value "sd" :value/type :sound}}]}
-                             {:pattern/type :atom, :value "bd" :value/type :sound}]}}
-            [0 3]))
-
 (defmethod query :layer
   [{:keys [value fs]} query-arc]
   (query {:pattern/type :stack
           :value (map (fn [f] (f value)) fs)}
          query-arc))
-(query {:pattern/type :layer
-        :fns [(fn [v] {:pattern/type :rev :value v})
-              (fn [v] {:pattern/type :fast :speed 3 :value v})]
-        :value {:pattern/type :fastcat
-                :len 2
-                :value [{:pattern/type :atom :value "bd"}
-                        {:pattern/type :atom :value "cp"}]}}
-       [0 1])
 
-(defmethod query :pan
+(defmethod query :jux/pan
+  ;; TODO eventually remove this for a more general solution
   [{:keys [value pan]} query-arc]
-  (->> query-arc
-       (query value)
+  (->> (query value query-arc)
        (map #(assoc % :pan pan))))
-
-(query {:pattern/type :pan
-        :pan -1
-        :value {:pattern/type :fastcat
-                :len 2
-                :value [{:pattern/type :atom :value "bd"}
-                        {:pattern/type :atom :value "cp"}]}}
-       [0 1])
 
 (defmethod query :jux
   [{:keys [value f]} query-arc]
   (query {:pattern/type :layer
-          :fns [(fn [v] {:pattern/type :pan
-                         :pan -1
-                         :value (f v)})
-                (fn [v] {:pattern/type :pan
-                         :pan 1
-                         :value v})]
+          :fs [(fn [v] {:pattern/type :jux/pan
+                        :pan -1
+                        :value (f v)})
+               (fn [v] {:pattern/type :jux/pan
+                        :pan 1
+                        :value v})]
           :value value}
          query-arc))
-
-(query {:pattern/type :jux
-        :f (fn [v] {:pattern/type :fast :speed 3 :value v})
-        :value {:pattern/type :fastcat
-                :len 2
-                :value [{:pattern/type :atom :value "bd"}
-                        {:pattern/type :atom :value "cp"}]}}
-       [0 1/2])
 
 (defmethod query :silence
   [_ query-arc]
@@ -424,7 +332,6 @@
                 (assoc ev :value :silence))))))
 
 (defmethod query :sometimes-by
-  ;; NOTE this might not work as expected, implementation is very different from actual Tidal
   [{:keys [value probability f]} query-arc]
   (let [rand-fn (memoize (fn [_] (rand)))]
     (concat (query {:pattern/type :degrade-by
@@ -437,47 +344,6 @@
                        :probability probability
                        :value value})
                    query-arc))))
-
-(comment
-  (declare remove-silences)
-  (->> [0 10]
-       (query {:pattern/type :sometimes-by
-               :probability 0.5
-
-               :f (fn [v] {:pattern/type :pan :pan 1 :value v})
-               ;; :f (fn [_] {:pattern/type :silence})
-               ;; :f (fn [v] {:pattern/type :fast :speed 2 :value v})
-               :value {:pattern/type :fastcat
-                       :len 2
-                       :value [{:pattern/type :atom :value "bd"}
-                               {:pattern/type :atom :value "cp"}]}})
-       remove-silences
-       (sort-by (comp first :arc/active))
-       (map (juxt :value :arc/active :pan))))
-
-(query {:pattern/type :degrade-by
-        :value {:pattern/type :atom :value "cp"}
-        :probability 0.5}
-       [0 10])
-
-(query {:pattern/type :degrade
-        :value {:pattern/type :fastcat
-                :len 2
-                :value [{:pattern/type :atom :value "bd"}
-                        {:pattern/type :atom :value "cp"}]}
-        :probability 0.5}
-       [0 10])
-
-(query  {:pattern/type :fastcat
-         :len 2
-         :value [{:pattern/type :degrade-by
-                  :value {:pattern/type :fastcat
-                          :len 2
-                          :value [{:pattern/type :atom :value "bd"}
-                                  {:pattern/type :atom :value "cp"}]}
-                  :probability 0.5}
-                 {:pattern/type :atom :value "hh"}]}
-        [0 10])
 
 (defmethod query :sometimes
   [data query-arc]
@@ -499,11 +365,6 @@
   [data query-arc]
   (query (make-sometimes-by 1/10 data) query-arc))
 
-(query {:pattern/type :fast
-        :speed 2
-        :value {:pattern/type :atom :value "cp", :arc/whole [9/2 5], :arc/active [9/2 5]}}
-       [9/2 5])
-
 (defmethod query :somecycles-by
   [{:keys [probability value f]} query-arc]
   (mapcat
@@ -517,15 +378,6 @@
   [data query-arc]
   (query (make-sometimes-by 1/2 data) query-arc))
 
-(comment (query {:pattern/type :somecycles-by
-                 :probability 0.5
-                 :f (fn [_] {:pattern/type :silence})
-                 :value {:pattern/type :fastcat
-                         :len 2
-                         :value [{:pattern/type :atom :value "bd"}
-                                 {:pattern/type :atom :value "cp"}]}}
-                [0 10]))
-
 (defmethod query :rotl
   [{:keys [value amount]} query-arc]
   (-> value
@@ -538,23 +390,6 @@
                 :pattern/type :rotl
                 :amount (* -1 amount))
          query-arc))
-
-(comment
-  (query {:pattern/type :rotl
-          :amount -1/4
-          :value {:pattern/type :fastcat
-                  :len 3
-                  :value [{:pattern/type :atom :value 1}
-                          {:pattern/type :atom :value 2}]}}
-         [0 1])
-  (query {:pattern/type :rotr
-          :amount 1/3
-          :value {:pattern/type :fastcat
-                  :value [{:pattern/type :atom :value 1}
-                          {:pattern/type :atom :value 2}
-                          #_{:pattern/type :atom :value 3}
-                          #_{:pattern/type :atom :value 4}]}}
-         [0 2]))
 
 (defn starts-in-cycle?
   [cycle [arc-start]]
@@ -640,109 +475,111 @@
                           arc))))
           (palindrome-cycles query-arc)))
 
-(do
-  (defn event-onset [event]
-    (-> event :arc/active first))
-  (defn sort-events-by-onset [events]
-    (sort-by event-onset events))
 
-  (defn assoc-control
-    [event {:keys [value/type value] :as _ctl-event}]
-    (assoc event type value))
+;;;;;; Control Patterns
 
-  (defn update-control-pattern-event
-    "`new-events` are the events being updated, `events` are the remaining events to be updated"
-    [{:keys [new-events event ctl-event events]}]
-    (let [new-events (assoc new-events
-                            (dec (count new-events))
-                            (assoc-control event ctl-event))
-          next-event (first events)]
-      (if next-event
-        (conj new-events next-event)
-        new-events)))
 
-  (defn event-has-current-ctl-event-value?
-    [event ctl-event] (= (:value ctl-event)
-                         ((:value/type ctl-event) event)))
+(defn event-onset [event]
+  (-> event :arc/active first))
+(defn sort-events-by-onset [events]
+  (sort-by event-onset events))
 
-  (defn control-pattern-query-done?
-    [{:keys [events ctl-events ctl-events-list]}]
-    (and (not (seq events))
-         (not (seq ctl-events))
-         (not (seq ctl-events-list))))
+(defn assoc-control
+  [event {:keys [value/type value] :as _ctl-event}]
+  (println (:value event) value)
+  (update event type (fn [prev-val] (if prev-val prev-val value))))
 
-  (defn control-pattern-query-single-cycle
-    [{:keys [value controls]} query-arc]
-    (let [ctl-events-list (map #(sort-events-by-onset (query % query-arc)) controls)
-          events (sort-events-by-onset (query value query-arc))
-          data {:new-events [(first events)]
-                :events (rest events)
-                :ctl-events-list (rest ctl-events-list)
-                :ctl-events (first ctl-events-list)}]
+(defn update-control-pattern-event
+  "`new-events` are the events being updated, `events` are the remaining events to be updated"
+  [{:keys [new-events event ctl-event events]}]
+  (let [new-events (assoc new-events
+                          (dec (count new-events))
+                          (assoc-control event ctl-event))
+        next-event (first events)]
+    (if next-event
+      (conj new-events next-event)
+      new-events)))
 
-      (loop [{:keys [new-events events ctl-events-list ctl-events] :as data} data]
-        (let [ctl-event (first ctl-events)
-              event (last new-events)
-              ctl-onset (event-onset ctl-event)
-              next-ctl-onset (event-onset (second ctl-events))
-              event-onset* (event-onset event)
-              next-ctl-events-set? (not (seq ctl-events))]
-          (cond
-            (control-pattern-query-done? data) new-events
+(defn event-has-current-ctl-event-value?
+  [event ctl-event] (= (:value ctl-event)
+                       ((:value/type ctl-event) event)))
 
-            next-ctl-events-set?
-            (recur {:new-events [(first new-events)]
-                    :events (rest new-events)
-                    :ctl-events-list (rest ctl-events-list)
-                    :ctl-events (first ctl-events-list)})
+(defn control-pattern-query-done?
+  [{:keys [events ctl-events ctl-events-list]}]
+  (and (not (seq events))
+       (not (seq ctl-events))
+       (not (seq ctl-events-list))))
 
-            (event-has-current-ctl-event-value? event ctl-event)
-            (recur (assoc data :ctl-events (rest ctl-events)))
+(defn control-pattern-query-single-cycle
+  ;; FIXME this can probably be improved by a lot
+  [{:keys [value controls]} query-arc]
+  (let [ctl-events-list (map #(sort-events-by-onset (query % query-arc)) controls)
+        events (sort-events-by-onset (query value query-arc))
+        data {:new-events [(first events)]
+              :events (rest events)
+              :ctl-events-list (rest ctl-events-list)
+              :ctl-events (first ctl-events-list)}]
 
-            (and next-ctl-onset (<= next-ctl-onset event-onset*))
-            (recur (assoc data :ctl-events (rest ctl-events)))
+    (loop [{:keys [new-events events ctl-events-list ctl-events] :as data} data]
+      (let [ctl-event (first ctl-events)
+            event (last new-events)
+            ctl-onset (event-onset ctl-event)
+            next-ctl-onset (event-onset (second ctl-events))
+            event-onset* (event-onset event)
+            next-ctl-events-set? (not (seq ctl-events))]
+        (cond
+          (control-pattern-query-done? data) new-events
 
-            (<= ctl-onset event-onset*)
-            (recur (assoc data
-                          :new-events (update-control-pattern-event
-                                       (assoc data
-                                              :event event
-                                              :ctl-event ctl-event))
-                          :events (rest events))))))))
+          next-ctl-events-set?
+          (recur {:new-events [(first new-events)]
+                  :events (rest new-events)
+                  :ctl-events-list (rest ctl-events-list)
+                  :ctl-events (first ctl-events-list)})
 
-  (defmethod query :control-pattern
-    [data query-arc]
-    (mapcat (fn [query-arc]
-              (control-pattern-query-single-cycle data query-arc))
-            (split-cycles query-arc)))
+          (event-has-current-ctl-event-value? event ctl-event)
+          (recur (assoc data :ctl-events (rest ctl-events)))
 
-  (map #(select-keys % [:arc/active :gain :note])
-       (query {:pattern/type :control-pattern
-               :controls [{:pattern/type :slowcat
-                           :len 3
-                           :value [{:pattern/type :atom, :value 1 :value/type :gain}
-                                   {:pattern/type :atom, :value 2 :value/type :gain}
-                                   {:pattern/type :atom, :value 3 :value/type :gain}]}
-                          {:pattern/type :slow
-                           :speed 2
-                           :value {:pattern/type :fastcat
-                                   :len 3
-                                   :value [{:pattern/type :atom, :value 10 :value/type :note}
-                                           {:pattern/type :atom, :value 9 :value/type :note}
-                                           {:pattern/type :atom, :value 8 :value/type :note}]}}]
-               :value {:pattern/type :fastcat
-                       :len 4
-                       :value [{:pattern/type :atom, :value "arpy" :value/type :sound}
-                               {:pattern/type :atom, :value "arpy" :value/type :sound}
-                               {:pattern/type :atom, :value "arpy" :value/type :sound}
-                               {:pattern/type :atom, :value "arpy" :value/type :sound}]}}
-              [0 2])))
+          (or (and next-ctl-onset (<= next-ctl-onset event-onset*))
+              (> ctl-onset event-onset*))
+          (recur (assoc data :ctl-events (rest ctl-events)))
 
-(query {:pattern/type :slow
-        :speed 2
-        :value {:pattern/type :fastcat
-                :len 3
-                :value [{:pattern/type :atom, :value 10 :value/type :note}
-                        {:pattern/type :atom, :value 9 :value/type :note}
-                        {:pattern/type :atom, :value 8 :value/type :note}]}}
-       [1 2])
+          (<= ctl-onset event-onset*)
+          (recur (assoc data
+                        :new-events (update-control-pattern-event
+                                     (assoc data
+                                            :event event
+                                            :ctl-event ctl-event))
+                        :events (rest events))))))))
+
+(defmethod query :control-pattern
+  [data query-arc]
+  (mapcat (fn [query-arc]
+            (control-pattern-query-single-cycle data query-arc))
+          (split-cycles query-arc)))
+
+(defn in-arc [[start end] onset-point]
+  (and (>= onset-point start)
+       (< onset-point end)))
+
+#_(defn inner-join
+    [f outer-events inner-events]
+    (->> (for [o-event outer-events
+               {[i-start] :arc/active :as i-event} inner-events]
+           (when (in-arc (:arc/active o-event) i-start)
+             (f o-event i-event)))
+         (remove nil?)))
+
+(defmethod query :superimpose
+  [{:keys [value f]} query-arc]
+  (query {:pattern/type :stack
+          :value [value (f value)]}
+         query-arc))
+
+(defmethod query :off
+  [{:keys [amount value f]} query-arc]
+  (query {:pattern/type :superimpose
+          :value value
+          :f (fn [value*] (f {:pattern/type :rotr
+                              :amount amount
+                              :value value*}))}
+         query-arc))

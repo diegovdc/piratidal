@@ -1,55 +1,20 @@
 (ns piratidal.pattern
   (:require
-   [clojure.math :as math]
    [piratidal.euclidean-rhythm :refer [euclidean-rhythm]]
-   [piratidal.time :refer [apply-pat-to-pat-both]]
-   [piratidal.utils :refer [rotate]]))
-
-(defn inc-cycle
-  [n]
-  (int (inc n)))
-
-(defn inc-arc
-  [n arc]
-  (map #(+ n %) arc))
-
-(defn map-arc
-  [event arc-kw f]
-  (update event arc-kw #(map f %)))
-
-(defn map-arcs
-  [f arc-kw events]
-  (map #(map-arc % arc-kw f) events))
-
-(defn span-cycles
-  [[start end]]
-  (loop [b (int start)
-         spans []]
-    (let [e (inc-cycle b)]
-      (cond
-        (< end b) []
-        (= b end) spans
-        (> e end) (conj spans [b end])
-        :else (recur e (conj spans [b e]))))))
-
-(defn split-cycles
-  [[start end]]
-  (loop [start* start
-         end* (min end (int (math/ceil start)))
-         arcs []]
-    (let [arcs* (if (= start* end*)
-                  arcs
-                  (conj arcs [start* end*]))]
-      (cond
-        (= end end*) arcs*
-        :else (recur end* (min end (inc end*)) arcs*)))))
+   [piratidal.time
+    :refer [apply-pat-to-pat-both
+            ends-in-cycle?
+            next-sam
+            sam
+            span-cycles
+            split-cycles
+            transpose-events-into-arc
+            update-event-time
+            update-span-time]]
+   [piratidal.utils :refer [rotate wrap-nth]]))
 
 (defmulti query
   (fn [data _query-arc] (:pattern/type data :event)))
-
-(defn sam [n] (int n))
-
-(defn next-sam [n] (inc (sam n)))
 
 (defmethod query :atom
   [{:keys [value value/type]} query-arc]
@@ -64,16 +29,6 @@
   ;; NOTE This might not be the best thing to do as an event is technically not a pattern
   [data _query-arc]
   data)
-
-(defn update-span-time
-  [timef arc]
-  (map timef arc))
-
-(defn update-event-time
-  [{:as event :keys [arc/active arc/whole]} timef]
-  (assoc event
-         :arc/whole (mapv timef whole)
-         :arc/active (mapv timef active)))
 
 (defn with-query-time
   [pat timef arc]
@@ -107,20 +62,12 @@
                    active))
           (query value query-arc)))
 
-(defn wrap-nth
-  [coll index]
-  (nth coll (mod index (count coll))))
-
-(def event-summary (juxt :value :arc/active (comp nil? :has-start?)))
-
 (defn filter-events-in-arc
   [[arc-start arc-end] events]
   (filter (fn [{[start] :arc/active}]
             (and (>= start arc-start)
                  (< start arc-end)))
           events))
-(declare split-cycles transpose-events-into-arc)
-
 (defmethod query :fastgap
   [{:keys [value speed]} query-arc]
   (->> (split-cycles query-arc)
@@ -283,24 +230,6 @@
   (query {:pattern/type :atom :value :silence}
          query-arc))
 
-(defn transpose-events-into-arc
-  [{:keys [origin-arc target-arc events]}]
-  (if-not (seq events)
-    ()
-    (let [[start-pos end-pos] origin-arc
-          [start end] target-arc
-          arc-ratio (- end start)
-          sorted-events (sort-by (comp  first :arc/active) events)
-          events-arc-ratio (- end-pos start-pos)]
-      (map (fn [{:as ev
-                 [s e] :arc/active}]
-             (let [dur (/ (* arc-ratio (- e s)) events-arc-ratio)
-                   offset (+ start (/ (* arc-ratio (- s start-pos)) events-arc-ratio))
-                   new-arc [offset (+ offset dur)]]
-               (assoc ev :arc/active new-arc
-                      :arc/whole new-arc)))
-           sorted-events))))
-
 (defn make-sometimes-by
   [probability data]
   (merge data {:pattern/type :somecycles-by
@@ -391,19 +320,6 @@
                 :amount (* -1 amount))
          query-arc))
 
-(defn starts-in-cycle?
-  [cycle [arc-start]]
-  (<= cycle arc-start))
-
-(defn ends-in-cycle?
-  [cycle [_ arc-end]]
-  (and (< cycle arc-end)
-       (<= arc-end (inc cycle))))
-
-(defn arc-length
-  [[start end]]
-  (- end start))
-
 (defn mirror-point
   "Given a point from an arc (start or end) in a cycle, return the position at the other side of the cycle's middle"
   [cycle point]
@@ -441,18 +357,17 @@
 (defn remove-silences [events]
   (remove silence? events))
 
-(do
-  (defn odd-cycle? [cycle-arc]
-    (odd? (first cycle-arc)))
+(defn odd-cycle? [cycle-arc]
+  (odd? (first cycle-arc)))
 
-  (defn palindrome-cycles
-    "Slow down the query-arc to repeat each cycle twice so that the odd one can be reversed"
-    [query-arc]
-    (map (fn [cycle-arc]
-           (let [cycle (first cycle-arc)
-                 start (int (/ cycle 2))]
-             {:cycle cycle :arc [start (inc start)]}))
-         (span-cycles query-arc))))
+(defn palindrome-cycles
+  "Slow down the query-arc to repeat each cycle twice so that the odd one can be reversed"
+  [query-arc]
+  (map (fn [cycle-arc]
+         (let [cycle (first cycle-arc)
+               start (int (/ cycle 2))]
+           {:cycle cycle :arc [start (inc start)]}))
+       (span-cycles query-arc)))
 
 (defn transpose-back-palindrome-event
   [cycle ev]
@@ -481,12 +396,12 @@
 
 (defn event-onset [event]
   (-> event :arc/active first))
+
 (defn sort-events-by-onset [events]
   (sort-by event-onset events))
 
 (defn assoc-control
   [event {:keys [value/type value] :as _ctl-event}]
-  (println (:value event) value)
   (update event type (fn [prev-val] (if prev-val prev-val value))))
 
 (defn update-control-pattern-event

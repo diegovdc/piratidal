@@ -9,3 +9,7 @@
   (let [size (count coll)
         i* (if (zero? size) 0 (mod i size))]
     (nth coll i* nil)))
+
+(defn wrap-nth
+  [coll index]
+  (nth coll (mod index (count coll))))

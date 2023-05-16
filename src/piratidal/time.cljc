@@ -1,4 +1,89 @@
-(ns piratidal.time)
+(ns piratidal.time
+  (:require
+   [clojure.math :as math]))
+
+(defn inc-cycle
+  [n]
+  (int (inc n)))
+
+(defn inc-arc
+  [n arc]
+  (map #(+ n %) arc))
+
+(defn map-arc
+  [event arc-kw f]
+  (update event arc-kw #(map f %)))
+
+(defn map-arcs
+  [f arc-kw events]
+  (map #(map-arc % arc-kw f) events))
+
+(defn span-cycles
+  [[start end]]
+  (loop [b (int start)
+         spans []]
+    (let [e (inc-cycle b)]
+      (cond
+        (< end b) []
+        (= b end) spans
+        (> e end) (conj spans [b end])
+        :else (recur e (conj spans [b e]))))))
+
+(defn split-cycles
+  [[start end]]
+  (loop [start* start
+         end* (min end (int (math/ceil start)))
+         arcs []]
+    (let [arcs* (if (= start* end*)
+                  arcs
+                  (conj arcs [start* end*]))]
+      (cond
+        (= end end*) arcs*
+        :else (recur end* (min end (inc end*)) arcs*)))))
+
+(defn sam [n] (int n))
+(defn next-sam [n] (inc (sam n)))
+
+(defn update-span-time
+  [timef arc]
+  (map timef arc))
+
+(defn update-event-time
+  [{:as event :keys [arc/active arc/whole]} timef]
+  (assoc event
+         :arc/whole (mapv timef whole)
+         :arc/active (mapv timef active)))
+
+(defn starts-in-cycle?
+  [cycle [arc-start]]
+  (<= cycle arc-start))
+
+(defn ends-in-cycle?
+  [cycle [_ arc-end]]
+  (and (< cycle arc-end)
+       (<= arc-end (inc cycle))))
+
+(defn arc-length
+  [[start end]]
+  (- end start))
+
+(defn transpose-events-into-arc
+  [{:keys [origin-arc target-arc events]}]
+  (if-not (seq events)
+    ()
+    (let [[start-pos end-pos] origin-arc
+          [start end] target-arc
+          arc-ratio (- end start)
+          sorted-events (sort-by (comp  first :arc/active) events)
+          events-arc-ratio (- end-pos start-pos)]
+      (map (fn [{:as ev
+                 [s e] :arc/active}]
+             (let [dur (/ (* arc-ratio (- e s)) events-arc-ratio)
+                   offset (+ start (/ (* arc-ratio (- s start-pos)) events-arc-ratio))
+                   new-arc [offset (+ offset dur)]]
+               (assoc ev :arc/active new-arc
+                      :arc/whole new-arc)))
+           sorted-events))))
 
 (defn sect
   "Simple intersection of two arcs

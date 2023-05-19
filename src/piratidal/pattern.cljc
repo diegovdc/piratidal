@@ -498,3 +498,32 @@
                               :amount amount
                               :value value*}))}
          query-arc))
+
+
+;;;;;;; Math
+
+
+(defn make-apply-query
+  ;; NOTE because of the impl of `apply-pat-to-pat-both`, this may return 0-length events. Which will be considered as silences by the `silence?` fn.
+  [{:keys [op op-pattern value op-direction query-arc]}]
+  (let [events (query value query-arc)
+        op-events (query op-pattern query-arc)
+        apply-fn (case op-direction
+                   :both apply-pat-to-pat-both
+                   :left apply-pat-to-pat-left)]
+    (apply-fn op events op-events)))
+
+(defmethod query :math-op
+  [{:keys [value op op-patterns value-type pattern-constructor apply-structure]
+    :or {apply-structure :both}} query-arc]
+  (let [events (if (seq op-patterns)
+                 (reduce (fn [value op-pattern]
+                           (make-apply-query {:op op
+                                              :op-pattern op-pattern
+                                              :value value
+                                              :op-direction apply-structure
+                                              :query-arc query-arc}))
+                         value
+                         op-patterns)
+                 (query value query-arc))]
+    events))

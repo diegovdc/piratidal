@@ -87,6 +87,7 @@
             (and (>= start arc-start)
                  (< start arc-end)))
           events))
+
 (defmethod query :fastgap
   [{:keys [value speed]} query-arc]
   (->> (split-cycles query-arc)
@@ -393,15 +394,17 @@
   (sort-by event-onset events))
 
 (defn assoc-control
-  [event {:keys [value/type value] :as _ctl-event}]
-  (update event type (fn [prev-val] (if prev-val prev-val value))))
+  [event {:keys [value/type value] :as _ctl-event} loop-id]
+  ;; TODO this probably needs fixing
+  (with-meta (assoc event type value)
+    {:loop-id loop-id}))
 
 (defn update-control-pattern-event
   "`new-events` are the events being updated, `events` are the remaining events to be updated"
-  [{:keys [new-events event ctl-event events]}]
+  [{:keys [new-events event ctl-event events loop-id]}]
   (let [new-events (assoc new-events
                           (dec (count new-events))
-                          (assoc-control event ctl-event))
+                          (assoc-control event ctl-event loop-id))
         next-event (first events)]
     (if next-event
       (conj new-events next-event)
@@ -425,9 +428,10 @@
         data {:new-events [(first events)]
               :events (rest events)
               :ctl-events-list (rest ctl-events-list)
-              :ctl-events (first ctl-events-list)}]
+              :ctl-events (first ctl-events-list)
+              :loop-id (random-uuid)}]
 
-    (loop [{:keys [new-events events ctl-events-list ctl-events] :as data} data]
+    (loop [{:keys [new-events events ctl-events-list ctl-events loop-id] :as data} data]
       (let [ctl-event (first ctl-events)
             event (last new-events)
             ctl-onset (event-onset ctl-event)
@@ -441,9 +445,11 @@
           (recur {:new-events [(first new-events)]
                   :events (rest new-events)
                   :ctl-events-list (rest ctl-events-list)
+                  :loop-id (random-uuid)
                   :ctl-events (first ctl-events-list)})
 
-          (event-has-current-ctl-event-value? event ctl-event)
+          #_(event-has-current-ctl-event-value? event ctl-event)
+          (= loop-id (:loop-id (meta event)))
           (recur (assoc data :ctl-events (rest ctl-events)))
 
           (or (and next-ctl-onset (<= next-ctl-onset event-onset*))

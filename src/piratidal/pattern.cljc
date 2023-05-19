@@ -2,15 +2,9 @@
   (:require
    [piratidal.euclidean-rhythm :refer [euclidean-rhythm]]
    [piratidal.time
-    :refer [apply-pat-to-pat-both
-            ends-in-cycle?
-            next-sam
-            sam
-            span-cycles
-            split-cycles
-            transpose-events-into-arc
-            update-event-time
-            update-span-time]]
+    :refer [apply-pat-to-pat-both apply-pat-to-pat-left ends-in-cycle?
+            event->param-map next-sam sam span-cycles split-cycles
+            transpose-events-into-arc update-event-time update-span-time]]
    [piratidal.utils :refer [rotate wrap-nth]]))
 
 (defmulti query
@@ -61,6 +55,31 @@
             (query (assoc speedable-pattern :speed value)
                    active))
           (query value query-arc)))
+(map (juxt :value :arc/active)
+     (query {:pattern/type :speed
+             :value {:pattern/type :fastcat
+                     :len 3
+                     :value [{:pattern/type :atom :value 2}
+                             {:pattern/type :atom :value 1}
+                             {:pattern/type :atom :value 1}]}
+             :speedable-pattern {:pattern/type :fast
+                                 :value {:pattern/type :fastcat
+                                         :len 3
+                                         :value [{:pattern/type :atom :value/type :sound :value "bd"}
+                                                 {:pattern/type :atom :value/type :sound :value "hh"}
+                                                 {:pattern/type :atom :value/type :sound :value "cp"}]}}}
+            [0 2]))
+
+;; the tParam familiy in tidal, except for squeezeParam
+(defmethod query :with-param-pattern
+  [{:keys [pattern/params value]} query-arc]
+  (->> params
+       (map #(query % query-arc))
+       (reduce (fn [apped-events new-events]
+                 (apply-pat-to-pat-both + apped-events new-events)))
+       (mapcat (fn [{:keys [arc/active] :as event}]
+                 (query (merge value (event->param-map event))
+                        active)))))
 
 (defn filter-events-in-arc
   [[arc-start arc-end] events]
@@ -89,33 +108,6 @@
   (let [total (apply + (map first value))])
   ;; TODO
   )
-
-(defn make-apply-query
-  ;; NOTE because of the impl of `apply-pat-to-pat-both`, this may return 0-length events. Which will be considered as silences by the `silence?` fn.
-  [op op-pattern value query-arc]
-  (let [events (query value query-arc)
-        op-events (query op-pattern query-arc)]
-    (apply-pat-to-pat-both op events op-events)))
-
-(defmethod query :+
-  [{:keys [value op-pattern]} query-arc]
-  (make-apply-query + op-pattern value query-arc))
-
-(defmethod query :-
-  [{:keys [value op-pattern]} query-arc]
-  (make-apply-query - op-pattern value query-arc))
-
-(defmethod query :*
-  [{:keys [value op-pattern]} query-arc]
-  (make-apply-query * op-pattern value query-arc))
-
-(defmethod query :div
-  ;; NOTE: using `:div` instead of `:/` because cljfmt doesn't like that name and it's probably not the nicest keyword anyways as it "conflicts" with namespaced keywords
-  [{:keys [value op-pattern]} query-arc]
-  ;; prevent division by `0` by returning `0` even if it's not mathematically correct ¯\_(ツ)_/¯
-  (let [safe-div (fn [a b] (if (zero? b) 0 (/ a b)))]
-    (make-apply-query safe-div op-pattern value query-arc)))
-
 (defn slowcat
   ;; TODO, test how this works when starting at spans different from 0 and perhaps a few cycles afterwards
   ;; FIXME probably elongate still doesn't work as expected

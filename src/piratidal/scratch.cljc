@@ -1,28 +1,26 @@
 (ns piratidal.scratch
-  (:require [clojure.core]
-            [clojure.string :as str]
-            [piratidal.pattern :refer [query]]))
+  (:require
+   [clojure.core :omit [+ -]]
+   [clojure.string :as str]
+   [piratidal.parser :refer [parse-pattern]]
+   [piratidal.pattern :refer [query]]))
 
-(defn +dispatcher
-  [& xs]
-  (cond
-    (every? number? xs) :numbers
-    (and (seq (first xs))
-         (:value (first (first xs)))) :pattern))
+(+ "1" "2")
+(- api/note 1 2 3)
+(- (with-meta {} {:pattern-constructor true}) 1 2 3)
 
-(defmulti +
-  #'+dispatcher)
+(macroexpand-1
+ '(def-pattern-ops [+ -]))
+(+ (with-meta {} {:pattern-constructor true}) "1 2 3" "1 2 3")
 
-(defmethod + :numbers
-  [& xs]
-  (apply clojure.core/+ xs))
+(+ {:value true} (with-meta {} {:pattern-constructor true}) "1 2 3" "1 2 3")
 
-(defmethod + :pattern
-  [& [pat & pats]]
-  (apply map
-         (fn [& xs] (apply clojure.core/+ (map :value xs)))
-         pat
-         (map cycle pats)))
+#_(defmethod + :pattern
+    [& [pat & pats]]
+    (apply map
+           (fn [& xs] (apply clojure.core/+ (map :value xs)))
+           pat
+           (map cycle pats)))
 
 (+ [{:value 1} {:value 3} {:value 6}]
    [{:value 2}]
@@ -251,16 +249,14 @@
 ;;;;;;;;;;
 
 
-(query {:pattern/type :fastcat
-        :len 2
-        :value
-        [{:pattern/type :atom, :value "bd"}
-         {:pattern/type :stack
-          :value
-          [{:pattern/type :fastcat
-            :len 3
-            :value
-            [{:pattern/type :atom, :value "bd"}
-             {:pattern/type :atom, :value "sn"}
-             {:pattern/type :atom, :value "hh"}]}]}]}
-       [0 1])
+(map (juxt :value :arc/active)
+     (query
+      {:pattern/type :fastcat
+       :len 2
+       :value
+       [{:pattern/type :atom, :value "bd"}
+        {:pattern/type :degrade-by
+         :value {:pattern/type :atom, :value "bd"}
+         :probability 0.5}]}
+      [0 10]))
+

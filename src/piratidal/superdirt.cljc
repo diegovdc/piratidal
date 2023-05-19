@@ -33,9 +33,11 @@
 
 (defn make-play-msg
   [value]
-  (-> {"_id_", (int (swap! _id_ inc))
-       "cps", (float 0.5625), ;; TODO unhardcode
-       "orbit", (int 0)}
+  (-> {"_id_", (int 1) #_(int (swap! _id_ inc))
+       "cps", (float 1), ;; TODO unhardcode
+       "delta" (double 1/3)
+       "orbit", (int 0)
+       "latency" (float 0.2)}
       (merge (value->super-dirt-args value))
       seq
       (conj "/dirt/play")
@@ -68,8 +70,17 @@
   ;; example
   (osc/osc-debug true)
   (init)
-  (osc/osc-send @osc-client "/dirt/play", "_id_", (int 1), "cps", (float 0.5625), "cycle", (float 28294.0), "delta", (float 3.5555520057678)
-                "orbit", (int 0), "s", "bd")
+  (osc/osc-send
+   @osc-client
+   "/dirt/play"
+   "_id_" (int 1)
+   "cps" (float 0.5625)
+   "cycle" (float 28294.0)
+   "delta" (float 3.5555520057678)
+   "orbit" (int 0)
+   "n" (int 4)
+   "s" "bd"
+   "latency" (float 0.2))
   (apply osc/osc-send @osc-client
          (make-play-msg {:value/type :sound
                          :value "bd"

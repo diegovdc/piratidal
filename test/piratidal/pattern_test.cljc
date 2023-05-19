@@ -1,6 +1,7 @@
 (ns piratidal.pattern-test
   (:require
    [clojure.test :refer [deftest is testing]]
+   [piratidal.core :as core]
    [piratidal.parser :refer [parse-pattern]]
    [piratidal.pattern
     :refer
@@ -198,32 +199,62 @@
          (palindrome-cycles [1/2 4]))))
 
 (deftest palindrome-test
-  (is (= [{:value/type :sound :value "bd", :arc/whole [0N 2N], :arc/active [0N 1N]}
-          ;; TODO figure out if active should span more than one cycle
-          {:value/type :sound :value "bd", :arc/whole [1N 3N], :arc/active [3N 5N]}]
-         (remove-silences
-          (query {:pattern/type :palindrome
-                  :value {:pattern/type :slow
-                          :speed 2
-                          :value {:pattern/type :atom :value/type :sound :value "bd"}}}
-                 [0 4]))))
-  (is (= [{:value/type :sound :value "bd", :arc/whole [0 1/3], :arc/active [0 1/3]}
-          {:value/type :sound :value "cp", :arc/whole [1/3 2/3], :arc/active [2/3 1N]}
-          {:value/type :sound :value "hh", :arc/whole [2/3 1], :arc/active [4/3 5/3]}
-          {:value/type :sound :value "hh", :arc/whole [0N 1/3], :arc/active [1N 4/3]}
-          {:value/type :sound :value "cp", :arc/whole [1/3 2/3], :arc/active [5/3 2N]}
-          {:value/type :sound :value "bd", :arc/whole [2/3 1N], :arc/active [7/3 8/3]}
-          {:value/type :sound :value "bd", :arc/whole [1 4/3], :arc/active [2 7/3]}
-          {:value/type :sound :value "cp", :arc/whole [4/3 5/3], :arc/active [8/3 3N]}
-          {:value/type :sound :value "hh", :arc/whole [5/3 2], :arc/active [10/3 11/3]}]
-         (remove-silences
-          (query {:pattern/type :palindrome
-                  :value {:pattern/type :fastcat
-                          :len 3
-                          :value [{:pattern/type :atom :value/type :sound :value "bd"}
-                                  {:pattern/type :atom :value/type :sound :value "cp"}
-                                  {:pattern/type :atom :value/type :sound :value "hh"}]}}
-                 [0 3])))))
+  (is (= [["bd" [0N 1N]]
+          ["bd" [3N 5N]]]
+         (mapv (juxt :value :arc/active)
+               (remove-silences
+                (query {:pattern/type :palindrome
+                        :value {:pattern/type :slow
+                                :speed 2
+                                :value {:pattern/type :atom :value/type :sound :value "bd"}}}
+                       [0 4])))))
+  (is (= [["bd" [0 1/3]]
+          ["cp" [1/3 2/3]]
+          ["hh" [2/3 1N]]
+          ["hh" [1N 4/3]]
+          ["cp" [4/3 5/3]]
+          ["bd" [5/3 2N]]
+          ["bd" [2 7/3]]
+          ["cp" [7/3 8/3]]
+          ["hh" [8/3 3N]]]
+         (mapv (juxt :value :arc/active)
+               (remove-silences
+                (query {:pattern/type :palindrome
+                        :value {:pattern/type :fastcat
+                                :len 3
+                                :value [{:pattern/type :atom :value/type :sound :value "bd"}
+                                        {:pattern/type :atom :value/type :sound :value "cp"}
+                                        {:pattern/type :atom :value/type :sound :value "hh"}]}}
+                       [0 3])))))
+  (is (= [["bd" [0 1/6]]
+          ["cp" [1/6 2/6]]
+          ["hh" [2/6 3/6]]
+          ["bd" [3/6 4/6]]
+          ["cp" [4/6 5/6]]
+          ["hh" [5/6 6/6]]
+          ["hh" [6/6 7/6]]
+          ["cp" [7/6 8/6]]
+          ["bd" [8/6 9/6]]
+          ["hh" [9/6 10/6]]
+          ["cp" [10/6 11/6]]
+          ["bd" [11/6 12/6]]]
+         (-> (core/sound "[bd cp hh]*2")
+             core/palindrome
+             (query [0 2])
+             (->> remove-silences
+                  (mapv (juxt :value :arc/active))))
+         (mapv (juxt :value :arc/active)
+               (remove-silences
+                (query {:pattern/type :palindrome
+                        :value {:pattern/type :with-param-pattern
+                                :value {:pattern/type :fast
+                                        :value {:pattern/type :fastcat
+                                                :len 3
+                                                :value [{:pattern/type :atom, :value "bd", :value/type :s}
+                                                        {:pattern/type :atom, :value "cp", :value/type :s}
+                                                        {:pattern/type :atom, :value "hh", :value/type :s}]}}
+                                :pattern/params [{:pattern/type :atom, :value 2, :value/type :speed}]}}
+                       [0 2]))))))
 
 (deftest superimpose-test
   (is (= [{:value/type :sound, :value "bd", :arc/whole [0 1], :arc/active [0 1]}
@@ -296,14 +327,14 @@
                 [0 1]))))
 
 (deftest rotl-test
-  (is (= [{:value/type nil, :value 1, :arc/whole [1/4 3/4], :arc/active [1/4 3/4]}
-          {:value/type nil, :value 2, :arc/whole [3/4 5/4], :arc/active [3/4 5/4]}]
+  (is (= [{:value/type :note, :value 1, :arc/whole [1/4 3/4], :arc/active [1/4 3/4]}
+          {:value/type :note, :value 2, :arc/whole [3/4 5/4], :arc/active [3/4 5/4]}]
          (query {:pattern/type :rotl
                  :amount -1/4
                  :value {:pattern/type :fastcat
                          :len 2
-                         :value [{:pattern/type :atom :value 1}
-                                 {:pattern/type :atom :value 2}]}}
+                         :value [{:pattern/type :atom :value 1 :value/type :note}
+                                 {:pattern/type :atom :value 2 :value/type :note}]}}
                 [0 1]))))
 
 (deftest rotr-test
@@ -367,12 +398,12 @@
 
 (deftest jux-test
   (is (= [;; fast events
-          ["bd" [0 1/6] -1]
-          ["cp" [1/6 1/3] -1]
-          ["bd" [1/3 1/2] -1]
-          ["cp" [1/2 2/3] -1]
-          ["bd" [2/3 5/6] -1]
-          ["cp" [5/6 1] -1]
+          ["bd" [0 1/6] 0]
+          ["cp" [1/6 1/3] 0]
+          ["bd" [1/3 1/2] 0]
+          ["cp" [1/2 2/3] 0]
+          ["bd" [2/3 5/6] 0]
+          ["cp" [5/6 1] 0]
           ;; original events
           ["bd" [0 1/2] 1]
           ["cp" [1/2 1] 1]]

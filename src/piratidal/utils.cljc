@@ -1,5 +1,6 @@
 (ns piratidal.utils
-  (:require [clojure.walk :as walk]))
+  (:require
+   [clojure.walk :as walk]))
 
 (defn rotate [a n]
   (let [l (count a)
@@ -22,3 +23,6 @@
              (assoc x :value/type value-type)
              x))
    ctl-pattern))
+
+(defn cps->bpm [cps]
+  (* 60 cps))

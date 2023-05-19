@@ -1,11 +1,39 @@
 (ns piratidal.api
+  "This namespace is only for generating the API of piratidal.
+  The implemented patterns and pattern transformation functions
+  are declared at the begining of the file. The actual api functions
+  are generated with macros.
+
+  For the implemetation of the pattern transformation functions see the `piratidal.pattern` namespace."
+  (:refer-clojure :exclude [loop + * / - mod quot])
   (:require
-   [clojure.core]
    [piratidal.math-operators :refer [* +]]
    [piratidal.parser :refer [maybe-parse-pattern parse-pattern
                              with-param-pattern]]
    [piratidal.pattern :refer [query]]
    [piratidal.utils :refer [deep-assoc-value-type]]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;
+;; Patterns and effects
+;;;;;;;;;;;;;;;;;;;;;;;;
+
+(declare s sound n note gain speed
+         ;; TODO what are lag, unit, loop , delta and offset... are they public from the user's perspective?
+         begin end length accelerate unit loop delta legato sustain amp channel pan
+         freq midinote octave lag offset cut orbit shape hcutoff hresonance bandf
+         bandq crush coarse cutoff attack release hold tremolorate tremolodepth
+         phaserrate phaserdepth tilt plat vowel delaytime delayfeedback delayAmp
+         delaySend lock size room dry leslie lrate lsize)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Patterns transformation functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; The function arguments are declared here as well. TODO tell cljkondo to autodeclare all these things for these macros
+(declare almost-always almost-never amount degrade degrade-by euclidean
+         f fast fastGap fs jux layer off often palindrome probability
+         pulses rarely rev rotation rotl rotr slow somecycles-by
+         sometimes somtimes-by speed steps superimpose undegrade-by)
 
 (defn main-pattern
   [value-type pat-str]
@@ -26,13 +54,14 @@
 
 (defn pattern-fn [pattern-type params pat]
   (let [param-patterns (map (fn [[k v]] (maybe-parse-pattern v {:value-type k}))
-                            ;;  do not include functions, which are passed as the `:f` param
-                            (dissoc params :f))]
+                            ;;  do not include functions, which are passed as the `:f` or `:fs` param
+                            (dissoc params :f :fs))]
 
     (cond-> {:pattern/type pattern-type
              :value (maybe-parse-pattern pat)}
       (seq param-patterns) (#(with-param-pattern param-patterns %))
-      (:f params) (assoc :f (:f params)))))
+      (:f params) (assoc :f (:f params))
+      (:fs params) (assoc :fs (:fs params)))))
 
 (defmacro def-main-and-control-patterns
   [syms]
@@ -59,54 +88,65 @@
 (comment
   (macroexpand-1
    '(def-main-and-control-patterns
-      [sound n note gain speed])))
-(declare sound n note gain speed)
+      [sound n note gain speed]))
+
+  (macroexpand-1
+   '(def-pattern-transformations
+      [[slow [speed]] [fast [speed]]])))
+
+;;;;;;;;;;;
+;; Generate the patterns and pattern transformation functions
 
 
+#_(def-main-and-control-patterns
+    [s n note gain speed sound
+     begin end length accelerate unit loop delta legato sustain amp channel pan
+     freq midinote octave lag offset cut orbit shape hcutoff hresonance bandf
+     bandq crush coarse cutoff attack release hold tremolorate tremolodepth
+     phaserrate phaserdepth tilt plat vowel delaytime delayfeedback delayAmp
+     delaySend lock size room dry leslie lrate lsize])
 
-;; Patterns
-
-
-(def-main-and-control-patterns
-  [sound n note gain speed sound])
-(comment
-  (meta n))
-;; Aliases
-
-(def s sound)
-
-(macroexpand-1
- '(def-pattern-transformations
+#_(def-pattern-transformations
     [[slow [speed]]
      [fast [speed]]
+     [fastGap [speed]]
      [rotl [amount]]
      [rotr [amount]]
      [rev []]
      [palindrome []]
-     [somecycles-by [probability f]]]))
+     [somecycles-by [probability f]]
+     [somtimes-by [probability f]]
+     [sometimes [f]]
+     [almost-always [f]]
+     [often [f]]
+     [rarely [f]]
+     [almost-never [f]]
+     [superimpose [f]]
+     [off [amount f]]
+     [degrade []]
+     [degrade-by [probability]]
+     [undegrade-by [probability]]
+     [jux [f]]
+     [layer [fs]]
+     [euclidean [pulses steps rotation]]
+   ;; TODO can stack, slowcat (and other cats)  be done here?
+     ])
 
-;; Patterns transformation functions
-;; The function arguments are declared here as well. TODO tell cljkondo to autodeclare all these things for these macros
-(declare amount f fast palindrome probability rev rotl rotr slow somecycles-by sometimes speed)
-(def-pattern-transformations
-  [[slow [speed]]
-   [fast [speed]]
-   [rotl [amount]]
-   [rotr [amount]]
-   [rev []]
-   [palindrome []]
-   [somecycles-by [probability f]]
-   [sometimes [f]]])
+;; Aliases
 
-(-> (sound "bd sn cp")
-    (gain "1 0.5")
-    (* n "1 2 3" "2")
-    #_palindrome
-    (slow 2)
-    #_(sometimes (fn [_] (-> (note "1 2") (gain "3"))))
-    (query [0 2]))
+(def sound s)
 
 (comment
+  (-> (sound "bd sn cp")
+      (gain "1 0.5")
+      (* n "1 2 3" "2")
+      palindrome
+      (slow 2)
+      (sometimes (fn [_] (-> (note "1 2") (gain "3"))))
+      (query [0 2])))
+
+(comment
+  ;; TODO convert to tests
   ;; possible operator notations
 
   (-> (sound "bd sn cp")

@@ -129,6 +129,10 @@
   (assert (:len data) ":len must be present")
   (slowcat data query-arc))
 
+(defmethod query :cat
+  [data query-arc]
+  (query (assoc data :pattern/type :slowcat) query-arc))
+
 (defmethod query :fastcat
   [{:keys [len] :as data} query-arc]
   (let [pats (:value data)]

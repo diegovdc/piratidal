@@ -1,8 +1,10 @@
 (ns piratidal.parser
   (:require
    [clojure.edn :as edn]
+   [clojure.string :as str]
    [instaparse.core :as insta]
-   [instaparse.transform :as insta-trans]))
+   [instaparse.transform :as insta-trans]
+   [piratidal.utils :refer [deep-assoc-value-type]]))
 
 (def tidal-pattern-grammar
   #?(:clj (slurp "src/piratidal/tidal.grammar")
@@ -12,7 +14,8 @@
 (defn parse-tidal
   [input & {:keys [check-ambiguous?]
             :or {check-ambiguous? false}}]
-  (let [parser (insta/parser tidal-pattern-grammar)
+  (let [input (str/trim (if (string? input) input (str input)))
+        parser (insta/parser tidal-pattern-grammar)
         parsed-data (insta/parse parser input)]
     (when check-ambiguous?
       (let [parses (insta/parses parser input)]
@@ -35,26 +38,41 @@
    :len (count xs) ;; TODO improve, need sofistication
    :value xs})
 
-(defn make-atom [x]
-  {:pattern/type :atom :value x})
+(defn make-atom [x value-type]
+  (cond-> {:pattern/type :atom :value x}
+    value-type (assoc :value/type value-type)))
+
+#?(:cljs
+   ;; TODO implement
+   (defn rationalize [x]
+     x))
+
+(defn with-param-pattern
+  [params pattern]
+  {:pattern/type :with-param-pattern
+   :value pattern
+   :pattern/params params})
 
 (defn transform-tree
-  [parse-tree]
+  [parse-tree & {:keys [value-type]}]
   (insta-trans/transform
    {:pattern identity
-    ;; TODO rename :cat, should be :fastcat
+     ;; TODO rename :cat, should be :fastcat
     :fastcat make-fastcat
 
-    :word make-atom
+    :word (fn [x] (make-atom x value-type))
     :sample (fn [& [value [_ n]]]
-              (assoc value :n n))
-    ;; TODO These to below should parse into a :pattern/type :atom
-    :int (fn [int-str] (int (edn/read-string int-str)))
+              (with-param-pattern
+                [(deep-assoc-value-type n :n)]
+                value))
+     ;; TODO These to below should parse into a :pattern/type :atom
+    :int (fn [int-str]
+           (make-atom (int (edn/read-string int-str)) value-type))
     :float (fn [float-str]
-             (double (edn/read-string float-str)))
+             (make-atom (rationalize (edn/read-string float-str)) value-type))
     :degrade-amount (fn [float-str]
-                      (double (edn/read-string float-str)))
-    :silence (fn [_] {:pattern/type :atom :value :silence})
+                      (make-atom (rationalize (edn/read-string float-str)) value-type))
+    :silence (fn [_] (make-atom :silence value-type))
     :group identity
     :stack (fn [& xs] {:pattern/type :stack :value (into [] xs)})
     :slowcat (fn [& xs]
@@ -64,33 +82,57 @@
                   :value (mapv make-slowcat xs)}))
     :slowcat-token (fn [& xs] (vec xs))
     :fast (fn [x [_ speed]]
-            {:pattern/type :fast
-             :value x
-             :speed speed})
+            (with-param-pattern
+              [(deep-assoc-value-type speed :speed)]
+              {:pattern/type :fast
+               :value x}))
     :slow (fn [x [_ speed]]
-            {:pattern/type :slow
-             :value x
-             :speed speed})
+            (with-param-pattern
+              [(deep-assoc-value-type speed :speed)]
+              {:pattern/type :slow
+               :value x}))
     :replicate (fn [pat [_ times]]
                  {:replicate (repeat times pat)})
     :polymeter (fn [& [stack [_ steps]]]
                  (let [value (->> stack :value (mapv :value))]
-                   {:pattern/type :polymeter
-                    :value value
-                    :len (or steps (apply max (map count value)))}))
+                   (with-param-pattern
+                     [(if steps (deep-assoc-value-type steps :len)
+                          (make-atom (apply max (map count value)) :len))]
+                     {:pattern/type :polymeter
+                      :value value})))
     :degrade (fn [& [stack [_ amount]]]
-               {:pattern/type :degrade-by
-                :value stack
-                :probability (or amount 0.5)})
+               (with-param-pattern
+                 [(if amount (deep-assoc-value-type amount :probability)
+                      (make-atom 0.5 :probability))]
+                 {:pattern/type :degrade-by
+                  :value stack}))
     :elongate (fn [& [pat [_ n]]]
                 {:elongated pat
                  :size n})
     :euclidean (fn [& [value [_ pulses steps rotation]]]
-                 {:pattern/type :euclidean
-                  :value value
-                  :pulses pulses
-                  :steps steps
-                  :rotation (or rotation 0)})}
+                 (with-param-pattern
+                   [(deep-assoc-value-type pulses :pulses)
+                    (deep-assoc-value-type steps :steps)
+                    (deep-assoc-value-type
+                     (or rotation {:pattern/type :atom :value 0 :value/type :rotation})
+                     :rotation)]
+                   {:pattern/type :euclidean
+                    :value value}))}
    parse-tree))
 
-(def parse-pattern (comp transform-tree parse-tidal))
+(defn parse-pattern
+  ([pat-str] (parse-pattern pat-str {}))
+  ([pat-str transform-opts]
+   (transform-tree (parse-tidal pat-str)
+                   transform-opts)))
+
+(defn maybe-parse-pattern
+  "In case a pattern is a string or a parsed string"
+  ([pat] (maybe-parse-pattern pat {}))
+  ([pat opts]
+   (if (or (string? pat) (number? pat))
+     (parse-pattern pat opts)
+     pat)))
+
+#_(parse-pattern "[bd hh cp]/2" {:value-type :sound})
+#_(parse-pattern "bd(3, 8, 2)" {:value-type :sound})

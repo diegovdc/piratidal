@@ -1,4 +1,5 @@
-(ns piratidal.utils)
+(ns piratidal.utils
+  (:require [clojure.walk :as walk]))
 
 (defn rotate [a n]
   (let [l (count a)
@@ -13,3 +14,11 @@
 (defn wrap-nth
   [coll index]
   (nth coll (mod index (count coll))))
+
+(defn deep-assoc-value-type
+  [ctl-pattern value-type]
+  (walk/postwalk
+   (fn [x] (if (= (:pattern/type x) :atom)
+             (assoc x :value/type value-type)
+             x))
+   ctl-pattern))

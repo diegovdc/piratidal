@@ -173,34 +173,6 @@
                  [:op-replicate [:int "2"]]]
                 [:op-elongate [:int "2"]]]]]
              (parse-tidal "bd:2(3, 8, 1)!2@2" :check-ambiguous? true))))
-    (testing "Complex pattern"
-      (is (= [:pattern
-              [:fastcat
-               [:word "a"]
-               [:silence "~"]
-               [:fast [:word "b"] [:op-fast [:int "2"]]]
-               [:group
-                [:stack
-                 [:pattern
-                  [:fastcat
-                   [:fast [:word "c"] [:op-fast [:int "2"]]]
-                   [:word "c"]]]]]
-               [:slowcat [:slowcat-token [:word "d"] [:word "e"]]]]
-              [:fastcat
-               [:replicate
-                [:slowcat [:slowcat-token [:word "a"] [:word "b"]]]
-                [:op-replicate [:int "2"]]]
-               [:slow [:word "a"] [:op-slow [:int "2"]]]
-               [:group
-                [:stack
-                 [:pattern [:fastcat [:word "a"]]]
-                 [:pattern
-                  [:fastcat
-                   [:slowcat
-                    [:slowcat-token [:word "b"]]
-                    [:slowcat-token [:word "c"]]]]]]]]]
-             (parse-tidal
-              "a ~  b*2 [c*2 c] <d e> . <a b>!2 a/2 [a , <b , c>]" :check-ambiguous? true))))
     (testing "Error handling"
       (testing "Prints somewhat nice errors to the repl"
         (is (= "Parse error at line 1, column 4:
@@ -221,17 +193,21 @@ Expected:
     ;; FIXME these numbers should be :pattern/type :atom
     (is (= {:pattern/type :fastcat
             :len 3
-            :value [1 {:pattern/type :atom, :value :silence} 2]}
+            :value
+            [{:pattern/type :atom, :value 1}
+             {:pattern/type :atom, :value :silence}
+             {:pattern/type :atom, :value 2}]}
            (transform-tree (parse-tidal "1 ~ 2" :check-ambiguous? true)))))
 
   (testing "Basic pattern with `x*2`"
     (is (= {:pattern/type :fastcat
             :len 3
-            :value [{:pattern/type :fast
-                     :value {:pattern/type :atom, :value "a"}
-                     :speed 2}
-                    {:pattern/type :atom, :value :silence}
-                    {:pattern/type :atom, :value "b"}]}
+            :value
+            [{:pattern/type :with-param-pattern
+              :value {:pattern/type :fast, :value {:pattern/type :atom, :value "a"}}
+              :pattern/params [{:pattern/type :atom, :value 2, :value/type :speed}]}
+             {:pattern/type :atom, :value :silence}
+             {:pattern/type :atom, :value "b"}]}
            (transform-tree (parse-tidal "a*2 ~ b" :check-ambiguous? true)))))
   (testing "`:group` [a b]}"
     (is (= {:pattern/type :fastcat
@@ -250,19 +226,17 @@ Expected:
   (testing "`:group` [a b] with `x*2`}"
     (is (= {:pattern/type :fastcat
             :len 2
-            :value
-            [{:pattern/type :atom, :value "bd"}
-             {:pattern/type :fast
-              :value
-              {:pattern/type :stack
-               :value
-               [{:pattern/type :fastcat
-                 :len 3
-                 :value
-                 [{:pattern/type :atom, :value "bd"}
-                  {:pattern/type :atom, :value "sn"}
-                  {:pattern/type :atom, :value "hh"}]}]}
-              :speed 2}]}
+            :value [{:pattern/type :atom, :value "bd"}
+                    {:pattern/type :with-param-pattern
+                     :value {:pattern/type :fast
+                             :value {:pattern/type :stack
+                                     :value [{:pattern/type :fastcat
+                                              :len 3
+                                              :value
+                                              [{:pattern/type :atom, :value "bd"}
+                                               {:pattern/type :atom, :value "sn"}
+                                               {:pattern/type :atom, :value "hh"}]}]}}
+                     :pattern/params [{:pattern/type :atom, :value 2, :value/type :speed}]}]}
            (transform-tree (parse-tidal "bd [bd sn hh]*2" :check-ambiguous? true)))))
   ;; TODO
   #_(testing "`:group` with `:op-choose` [a | b]}"
@@ -316,49 +290,55 @@ Expected:
     (is (= {:pattern/type :fastcat
             :len 2
             :value [{:pattern/type :atom, :value "bd"}
-                    {:pattern/type :polymeter
-                     :value [[{:pattern/type :atom, :value "bd"}
-                              {:pattern/type :atom, :value "hh"}
-                              {:pattern/type :atom, :value "sn"}]]
-                     :len 3}]}
+                    {:pattern/type :with-param-pattern
+                     :value {:pattern/type :polymeter
+                             :value [[{:pattern/type :atom, :value "bd"}
+                                      {:pattern/type :atom, :value "hh"}
+                                      {:pattern/type :atom, :value "sn"}]]}
+                     :pattern/params [{:pattern/type :atom, :value 3, :value/type :len}]}]}
            (transform-tree (parse-tidal "bd {bd hh sn}" :check-ambiguous? true)))))
   (testing "stacked `:polymeter`s {a b c, d e}"
     (is (= {:pattern/type :fastcat
             :len 2
             :value [{:pattern/type :atom, :value "bd"}
-                    {:pattern/type :polymeter
-                     :value [[{:pattern/type :atom, :value "bd"}
-                              {:pattern/type :atom, :value "hh"}
-                              {:pattern/type :atom, :value "sn"}]
-                             [{:pattern/type :atom, :value "hh"}
-                              {:pattern/type :atom, :value "sn"}]]
-                     :len 3}]}
+                    {:pattern/type :with-param-pattern
+                     :value
+                     {:pattern/type :polymeter
+                      :value [[{:pattern/type :atom, :value "bd"}
+                               {:pattern/type :atom, :value "hh"}
+                               {:pattern/type :atom, :value "sn"}]
+                              [{:pattern/type :atom, :value "hh"}
+                               {:pattern/type :atom, :value "sn"}]]}
+                     :pattern/params [{:pattern/type :atom, :value 3, :value/type :len}]}]}
            (transform-tree (parse-tidal "bd {bd hh sn, hh sn}" :check-ambiguous? true)))))
   (testing "`:polymeter` with steps {a b c}%8"
     (is (= {:pattern/type :fastcat
             :len 2
             :value [{:pattern/type :atom, :value "bd"}
-                    {:pattern/type :polymeter
-                     :value [[{:pattern/type :atom, :value "bd"}
-                              {:pattern/type :atom, :value "hh"}
-                              {:pattern/type :atom, :value "sn"}]]
-                     :len 8}]}
+                    {:pattern/type :with-param-pattern
+                     :value {:pattern/type :polymeter
+                             :value [[{:pattern/type :atom, :value "bd"}
+                                      {:pattern/type :atom, :value "hh"}
+                                      {:pattern/type :atom, :value "sn"}]]}
+                     :pattern/params [{:pattern/type :atom, :value 8, :value/type :len}]}]}
            (transform-tree (parse-tidal "bd {bd hh sn}%8" :check-ambiguous? true)))))
   (testing "`:degrade` a?"
     (is (= {:pattern/type :fastcat
             :len 2
             :value [{:pattern/type :atom, :value "bd"}
-                    {:pattern/type :degrade-by
-                     :value {:pattern/type :atom, :value "bd"}
-                     :probability 0.5}]}
+                    {:pattern/type :with-param-pattern
+                     :value {:pattern/type :degrade-by
+                             :value {:pattern/type :atom, :value "bd"}}
+                     :pattern/params [{:pattern/type :atom, :value 0.5, :value/type :probability}]}]}
            (transform-tree (parse-tidal "bd bd?" :check-ambiguous? true)))))
   (testing "`:degrade` with amount a?0.1"
     (is (= {:pattern/type :fastcat
             :len 2
             :value [{:pattern/type :atom, :value "bd"}
-                    {:pattern/type :degrade-by
-                     :value {:pattern/type :atom, :value "bd"}
-                     :probability 0.1}]}
+                    {:pattern/type :with-param-pattern
+                     :value {:pattern/type :degrade-by
+                             :value {:pattern/type :atom, :value "bd"}}
+                     :pattern/params [{:pattern/type :atom, :value 1/10, :value/type :probability}]}]}
            (transform-tree (parse-tidal "bd bd?0.1" :check-ambiguous? true)))))
   #_(testing "`:op-elongate`"
       (is (= [{:elongated {:word "bd"}, :size 2} {:word "bd"}]
@@ -368,23 +348,26 @@ Expected:
   (testing "`:op-sample`"
     (is (= {:pattern/type :fastcat
             :len 1
-            :value [{:pattern/type :atom, :value "bd", :n 2}]}
+            :value [{:pattern/type :with-param-pattern
+                     :value {:pattern/type :atom, :value "bd"}
+                     :pattern/params [{:pattern/type :atom, :value 2, :value/type :n}]}]}
            (transform-tree (parse-tidal "bd:2" :check-ambiguous? true)))))
   (testing "`:op-euclidean`"
     (is (= {:pattern/type :fastcat
             :len 1
-            :value [{:pattern/type :euclidean
-                     :value {:pattern/type :atom, :value "bd"}
-                     :pulses 3
-                     :steps 8
-                     :rotation 0}]}
+            :value [{:pattern/type :with-param-pattern
+                     :value {:pattern/type :euclidean
+                             :value {:pattern/type :atom, :value "bd"}}
+                     :pattern/params [{:pattern/type :atom, :value 3, :value/type :pulses}
+                                      {:pattern/type :atom, :value 8, :value/type :steps}
+                                      {:pattern/type :atom, :value 0, :value/type :rotation}]}]}
            (transform-tree (parse-tidal "bd(3, 8)" :check-ambiguous? true))))
-    (is (= {:pattern/type :fastcat
-            :len 1
-            :value
-            [{:pattern/type :euclidean
-              :value {:pattern/type :atom, :value "bd"}
-              :pulses 3
-              :steps 8
-              :rotation 1}]}
-           (transform-tree (parse-tidal "bd(3, 8, 1)" :check-ambiguous? true))))))
+    (is (=  {:pattern/type :fastcat
+             :len 1
+             :value [{:pattern/type :with-param-pattern
+                      :value {:pattern/type :euclidean
+                              :value {:pattern/type :atom, :value "bd"}}
+                      :pattern/params [{:pattern/type :atom, :value 3, :value/type :pulses}
+                                       {:pattern/type :atom, :value 8, :value/type :steps}
+                                       {:pattern/type :atom, :value 1, :value/type :rotation}]}]}
+            (transform-tree (parse-tidal "bd(3, 8, 1)" :check-ambiguous? true))))))

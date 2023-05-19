@@ -49,27 +49,6 @@
   [pattern-data query-arc]
   (slow pattern-data query-arc))
 
-(defmethod query :speed
-  [{:keys [value speedable-pattern]} query-arc]
-  (mapcat (fn [{:keys [value arc/active]}]
-            (query (assoc speedable-pattern :speed value)
-                   active))
-          (query value query-arc)))
-(map (juxt :value :arc/active)
-     (query {:pattern/type :speed
-             :value {:pattern/type :fastcat
-                     :len 3
-                     :value [{:pattern/type :atom :value 2}
-                             {:pattern/type :atom :value 1}
-                             {:pattern/type :atom :value 1}]}
-             :speedable-pattern {:pattern/type :fast
-                                 :value {:pattern/type :fastcat
-                                         :len 3
-                                         :value [{:pattern/type :atom :value/type :sound :value "bd"}
-                                                 {:pattern/type :atom :value/type :sound :value "hh"}
-                                                 {:pattern/type :atom :value/type :sound :value "cp"}]}}}
-            [0 2]))
-
 ;; the tParam familiy in tidal, except for squeezeParam
 (defmethod query :with-param-pattern
   [{:keys [pattern/params value]} query-arc]

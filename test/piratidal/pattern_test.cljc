@@ -80,25 +80,6 @@
                                    {:pattern/type :atom :value/type :sound :value "cp"}]}}
                   [1 2])))))
 
-(deftest speed-test
-  (is (= [{:value/type :sound :value "bd", :arc/whole [0 1/6], :arc/active [0 1/6]}
-          {:value/type :sound :value "hh", :arc/whole [1/6 1/3], :arc/active [1/6 1/3]}
-          {:value/type :sound :value "hh", :arc/whole [1/3 2/3], :arc/active [1/3 2/3]}
-          {:value/type :sound :value "cp", :arc/whole [2/3 1], :arc/active [2/3 1]}]
-         (query {:pattern/type :speed
-                 :value {:pattern/type :fastcat
-                         :len 3
-                         :value [{:pattern/type :atom :value 2}
-                                 {:pattern/type :atom :value 1}
-                                 {:pattern/type :atom :value 1}]}
-                 :speedable-pattern {:pattern/type :fast
-                                     :value {:pattern/type :fastcat
-                                             :len 3
-                                             :value [{:pattern/type :atom :value/type :sound :value "bd"}
-                                                     {:pattern/type :atom :value/type :sound :value "hh"}
-                                                     {:pattern/type :atom :value/type :sound :value "cp"}]}}}
-                [0 1]))))
-
 (deftest slowcat-test
   (is (= [{:value/type :sound :value "bd", :arc/whole [0 1], :arc/active [0 1]}
           {:value/type :sound :value "hh", :arc/whole [1 2], :arc/active [1 2]}

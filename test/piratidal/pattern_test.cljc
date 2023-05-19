@@ -1,6 +1,7 @@
 (ns piratidal.pattern-test
   (:require
    [clojure.test :refer [deftest is testing]]
+   [piratidal.parser :refer [parse-pattern]]
    [piratidal.pattern
     :refer
     [palindrome-cycles query remove-silences rev-event]]))
@@ -58,7 +59,11 @@
                          :value [{:pattern/type :atom :value/type :sound :value "bd"}
                                  {:pattern/type :atom :value/type :sound :value "hh"}
                                  {:pattern/type :atom :value/type :sound :value "cp"}]}}
-                [0 2])))
+                [0 2])
+         (->> (query (parse-pattern "[bd hh cp]/2" {:value-type :sound}) [0 2])
+              (map #(assoc % :value/type :sound))
+              remove-silences)))
+
   (testing "a single cycle"
     (is (= [{:value/type :sound
              :value "hh"
@@ -453,3 +458,33 @@
                                          {:pattern/type :atom, :value "b" :value/type :sound}
                                          {:pattern/type :atom, :value "c" :value/type :sound}]]}
                                [0 2]))))))
+
+(deftest with-param-pattern-test
+  (is (= [["cp" [0 1/8] nil]
+          [:silence [1/8 1/4] nil]
+          [:silence [1/4 3/8] nil]
+          ["cp" [3/10 2/5] false]
+          [:silence [2/5 1/2] nil]
+          [:silence [1/2 3/5] nil]
+          ["cp" [3/5 7/10] nil]
+          ["cp" [2/3 3/4] nil]
+          [:silence [3/4 5/6] nil]
+          [:silence [5/6 11/12] nil]
+          [:silence [11/12 1] nil]]
+         ;; TODO make a generative test that ensures that the events that don't have `:has-start? false` all start one after the other
+         (mapv (juxt :value :arc/active :has-start?)
+               (query {:pattern/type :with-param-pattern
+                       :pattern/params [{:pattern/type :fastcat
+                                         :len 3
+                                         :value [{:pattern/type :atom :value 8 :value/type :steps}
+                                                 {:pattern/type :atom :value 10 :value/type :steps}
+                                                 {:pattern/type :atom :value 12 :value/type :steps}]}
+                                        {:pattern/type :slowcat
+                                         :len 3
+                                         :value [{:pattern/type :atom :value 3 :value/type :pulses}
+                                                 {:pattern/type :atom :value 4 :value/type :pulses}
+                                                 {:pattern/type :atom :value 5 :value/type :pulses}]}
+                                        {:pattern/type :atom :value 0 :value/type :rotation}]
+                       :value {:pattern/type :euclidean
+                               :value {:pattern/type :atom, :value "cp" :value/type :sound}}}
+                      [0 1])))))

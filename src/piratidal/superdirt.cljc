@@ -1,5 +1,6 @@
 (ns piratidal.superdirt
-  (:require [overtone.osc :as osc]))
+  (:require [overtone.osc :as osc]
+            [piratidal.pattern :refer [silence?]]))
 
 (defonce osc-client (atom nil))
 
@@ -16,14 +17,19 @@
     [value]
     (into {} (map (fn [[k v]]
                     (cond
-                      (= :value k) ["s" (:word v)]
                       (string? v) [(name k) v]
                       (int? v) [(name k) (int v)]
                       :else [(name k) (float v)]))
-                  (dissoc value :arc))))
+                  (-> value
+                      (dissoc :value :arc/active :arc/whole :pattern/type :value/type)
+                      (assoc (:value/type value) (:value value))))))
 
   (value->super-dirt-args
-   {:value {:word "bd"} :arc [1/2 3/4] :gain 1}))
+   {:value/type :sound
+    :value "bd"
+    :arc/whole [0 1/3]
+    :arc/active [0 1/3]
+    :n 3}))
 
 (defn make-play-msg
   [value]
@@ -37,17 +43,27 @@
 
 (comment
   (make-play-msg
-   {:value {:word "bd"} :arc [1/2 3/4] :gain 1}))
+   {:value/type :sound
+    :value "bd"
+    :arc/whole [0 1/3]
+    :arc/active [0 1/3]
+    :n 3}))
 
 (defn send-message*
   [osc-send osc-client value]
-  (apply osc-send osc-client (make-play-msg value)))
+  (when-not (silence? value)
+    (apply osc-send osc-client (make-play-msg value))))
 
 (def send-message
   (partial send-message* osc/osc-send))
 
 (comment
-  (send-message @osc-client {:value {:word "bd"} :arc [1/2 3/4] :gain 1}))
+  (send-message @osc-client
+                {:value/type :sound
+                 :value "bd"
+                 :arc/whole [0 1/3]
+                 :arc/active [0 1/3]
+                 :n 3}))
 (comment
   ;; example
   (osc/osc-debug true)
@@ -55,4 +71,8 @@
   (osc/osc-send @osc-client "/dirt/play", "_id_", (int 1), "cps", (float 0.5625), "cycle", (float 28294.0), "delta", (float 3.5555520057678)
                 "orbit", (int 0), "s", "bd")
   (apply osc/osc-send @osc-client
-         (make-play-msg {:s "bd" :cycle 0 :gain 1})))
+         (make-play-msg {:value/type :sound
+                         :value "bd"
+                         :arc/whole [0 1/3]
+                         :arc/active [0 1/3]
+                         :n 3})))

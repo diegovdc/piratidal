@@ -147,7 +147,10 @@
 
 (defn merge-params
   [main-event op-event]
-  (merge main-event (event->param-map op-event)))
+  (let [params (event->param-map op-event)
+        value ((:value/type main-event) params)]
+    (cond-> (merge main-event params)
+      value (assoc :value value))))
 
 (defn merge-pat-to-pat-left
   ([main-events op-events] (merge-pat-to-pat-left merge-params main-events op-events))

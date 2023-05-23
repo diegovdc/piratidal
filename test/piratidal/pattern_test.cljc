@@ -1,11 +1,12 @@
 (ns piratidal.pattern-test
   (:require
    [clojure.test :refer [deftest is testing]]
-   [piratidal.core :as core]
+   [piratidal.core :as core :refer [fast gain jux s sound]]
    [piratidal.parser :refer [parse-pattern]]
    [piratidal.pattern
     :refer
-    [palindrome-cycles query remove-silences rev-event]]))
+    [apply-off-fn palindrome-cycles query remove-silences rev-event
+     sometimes-by]]))
 
 (deftest atom-test
   (is (= [{:value/type :sound :value "bd", :arc/whole [0 1], :arc/active [0 1]}
@@ -257,14 +258,16 @@
                        [0 2]))))))
 
 (deftest superimpose-test
-  (is (= [{:value/type :sound, :value "bd", :arc/whole [0 1], :arc/active [0 1]}
-          {:value/type :sound, :value "bd", :arc/whole [0 1], :arc/active [0 1], :gain 1}]
-         (query {:pattern/type :superimpose
-                 :value {:pattern/type :atom, :value "bd" :value/type :sound}
-                 :f (fn [v] {:pattern/type :control-pattern
-                             :controls [{:pattern/type :atom, :value 1 :value/type :gain}]
-                             :value v})}
-                [0 1]))))
+  (let [value {:pattern/type :atom, :value "bd" :value/type :sound}
+        f (fn [v] {:pattern/type :control-pattern
+                   :controls [{:pattern/type :atom, :value 1 :value/type :gain}]
+                   :value v})]
+    (is (= [{:value/type :sound, :value "bd", :arc/whole [0 1], :arc/active [0 1]}
+            {:value/type :sound, :value "bd", :arc/whole [0 1], :arc/active [0 1], :gain 1}]
+           (query {:pattern/type :superimpose
+                   :value value
+                   :fvalue (f value)}
+                  [0 1])))))
 
 (deftest control-pattern-test
   (is (= [{:value/type :sound, :value "bd", :arc/whole [0 1], :arc/active [0 1], :gain 1}]
@@ -304,27 +307,67 @@
                                       {:pattern/type :atom, :value "arpy" :value/type :sound}
                                       {:pattern/type :atom, :value "arpy" :value/type :sound}
                                       {:pattern/type :atom, :value "arpy" :value/type :sound}]}}
-                     [0 2])))))
+                     [0 2]))))
+  (testing "The `:value` can be updated if the contol pattern if of the same `:value/type`"
+    (is (= [{:value "cp", :value/type :s, :arc/whole [0 1], :arc/active [0 1], :s "cp"}]
+           (query (-> (s "bd") (s "cp"))
+                  [0 1])))))
 
 (deftest off-test
   (is (= [{:value/type :sound :value "bd" :arc/whole [0 1/2] :arc/active [0 1/2]}
           {:value/type :sound :value "cp" :arc/whole [1/2 1] :arc/active [1/2 1]}
           {:value/type :sound :value "bd" :arc/whole [1/4 3/4] :arc/active [1/4 3/4] :gain 1}
           {:value/type :sound :value "cp" :arc/whole [3/4 5/4] :arc/active [3/4 5/4] :gain 3}]
-         (query {:pattern/type :off
-                 :amount 1/4
-                 :value {:pattern/type :fastcat
-                         :len 2
-                         :value [{:pattern/type :atom, :value "bd" :value/type :sound}
-                                 {:pattern/type :atom, :value "cp" :value/type :sound}]}
-                 :f (fn [v] {:pattern/type :control-pattern
-                             :controls [{:pattern/type :fastcat
-                                         :len 3
-                                         :value [{:pattern/type :atom, :value 1 :value/type :gain}
-                                                 {:pattern/type :atom, :value 2 :value/type :gain}
-                                                 {:pattern/type :atom, :value 3 :value/type :gain}]}]
-                             :value v})}
-                [0 1]))))
+         (let [amount 1/4
+               value {:pattern/type :fastcat
+                      :len 2
+                      :value [{:pattern/type :atom, :value "bd" :value/type :sound}
+                              {:pattern/type :atom, :value "cp" :value/type :sound}]}
+               f (fn [v] {:pattern/type :control-pattern
+                          :controls [{:pattern/type :fastcat
+                                      :len 3
+                                      :value [{:pattern/type :atom, :value 1 :value/type :gain}
+                                              {:pattern/type :atom, :value 2 :value/type :gain}
+                                              {:pattern/type :atom, :value 3 :value/type :gain}]}]
+                          :value v})]
+           (query {:pattern/type :off
+                   :value value
+                   :fvalue (apply-off-fn f amount value)}
+                  [0 1])))))
+
+(comment
+  (map (juxt :value :arc/active :crush)
+       (query {:pattern/type :with-param-pattern
+               :pattern/params [{:pattern/type :fastcat
+                                 :len 1
+                                 :value [{:pattern/type :atom, :value 1/4, :value/type :amount}]}]
+               :value {:pattern/type :off
+                       :value {:pattern/type :fastcat
+                               :len 1
+                               :value [{:pattern/type :atom, :value "bd", :value/type :s}]}
+                       :fvalue {:pattern/type :control-pattern
+                                :value {:pattern/type :fastcat
+                                        :len 1
+                                        :value [{:pattern/type :atom, :value "bd", :value/type :s}]}
+                                :controls [{:pattern/type :fastcat
+                                            :len 1
+                                            :value [{:pattern/type :atom, :value 4, :value/type :crush}]}]}}}
+              [1 2]))
+
+  (map (juxt :value :arc/active :has-start? :crush)
+       (query {:pattern/type :rotr
+               :amount 1/4
+               :value {:pattern/type :fastcat
+                       :len 1
+                       :value [{:pattern/type :atom, :value "bd", :value/type :s}]}}
+              [1 2]))
+  (map (juxt :value :arc/active :crush)
+       (query {:pattern/type :rotr
+               :amount 1/4
+               :value {:pattern/type :fastcat
+                       :len 1
+                       :value [{:pattern/type :atom, :value "bd", :value/type :s}]}}
+              [1 2])))
 
 (deftest rotl-test
   (is (= [{:value/type :note, :value 1, :arc/whole [1/4 3/4], :arc/active [1/4 3/4]}
@@ -361,9 +404,20 @@
                  (map :value
                       (query {:pattern/type :somecycles-by
                               :probability 0.5
-                              :f (fn [_] {:pattern/type :silence})
+                              :fvalue {:pattern/type :silence}
                               :value {:pattern/type :atom :value "bd"}}
                              [0 10000])))))))
+
+(deftest sometimes-by-test
+  (testing "In 10K iterations with probability 50%, then the value lies within 50%+-5%"
+    (let [events (map (juxt :value :gain)
+                      (remove-silences
+                       (query
+                        (-> (s "bd")
+                            (sometimes-by 0.5 #(gain % 1)))
+                        [0 1000])))]
+      (is (= 1000 (count events)))
+      (is (->> events frequencies (every? (fn [[_ v]] (< (* 500 0.95) v (* 500 1.05)))))))))
 
 (deftest degrade-by-test
   (testing "In 10K iterations with probability 50%, then the value lies within 50%+-5%"
@@ -376,45 +430,52 @@
                              [0 10000])))))))
 
 (deftest layer-test
-  (is (= [;; rev
-          ["cp" [0N 1/2]]
-          ["bd" [1/2 1N]]
-          ;; fast
-          ["bd" [0 1/6]]
-          ["cp" [1/6 1/3]]
-          ["bd" [1/3 1/2]]
-          ["cp" [1/2 2/3]]
-          ["bd" [2/3 5/6]]
-          ["cp" [5/6 1]]]
-         (map (juxt :value :arc/active)
-              (query {:pattern/type :layer
-                      :fs [(fn [v] {:pattern/type :rev :value v})
-                           (fn [v] {:pattern/type :fast :speed 3 :value v})]
-                      :value {:pattern/type :fastcat
-                              :len 2
-                              :value [{:pattern/type :atom :value "bd"}
-                                      {:pattern/type :atom :value "cp"}]}}
-                     [0 1])))))
+  (let [value {:pattern/type :fastcat
+               :len 2
+               :value [{:pattern/type :atom :value "bd"}
+                       {:pattern/type :atom :value "cp"}]}
+        fs [(fn [v] {:pattern/type :rev :value v})
+            (fn [v] {:pattern/type :fast :speed 3 :value v})]]
+    (is (= [;; rev
+            ["cp" [0N 1/2]]
+            ["bd" [1/2 1N]]
+            ;; fast
+            ["bd" [0 1/6]]
+            ["cp" [1/6 1/3]]
+            ["bd" [1/3 1/2]]
+            ["cp" [1/2 2/3]]
+            ["bd" [2/3 5/6]]
+            ["cp" [5/6 1]]]
+           (map (juxt :value :arc/active)
+                (query {:pattern/type :layer
+                        :value (map (fn [f] (f value)) fs)}
+                       [0 1]))))))
 
 (deftest jux-test
-  (is (= [;; fast events
-          ["bd" [0 1/6] 0]
-          ["cp" [1/6 1/3] 0]
-          ["bd" [1/3 1/2] 0]
-          ["cp" [1/2 2/3] 0]
-          ["bd" [2/3 5/6] 0]
-          ["cp" [5/6 1] 0]
-          ;; original events
-          ["bd" [0 1/2] 1]
-          ["cp" [1/2 1] 1]]
-         (map (juxt :value :arc/active :pan)
-              (query {:pattern/type :jux
-                      :f (fn [v] {:pattern/type :fast :speed 3 :value v})
-                      :value {:pattern/type :fastcat
-                              :len 2
-                              :value [{:pattern/type :atom :value "bd"}
-                                      {:pattern/type :atom :value "cp"}]}}
-                     [0 1])))))
+  (let [value {:pattern/type :fastcat
+               :len 2
+               :value [{:pattern/type :atom :value "bd"}
+                       {:pattern/type :atom :value "cp"}]}
+        f (fn [v] {:pattern/type :fast :speed 3 :value v})]
+    (is (= [;; fast events
+            ["bd" [0 1/6] 0]
+            ["cp" [1/6 1/3] 0]
+            ["bd" [1/3 1/2] 0]
+            ["cp" [1/2 2/3] 0]
+            ["bd" [2/3 5/6] 0]
+            ["cp" [5/6 1] 0]
+            ;; original events
+            ["bd" [0 1/2] 1]
+            ["cp" [1/2 1] 1]]
+           (map (juxt :value :arc/active :pan)
+                (query {:pattern/type :jux
+                        :fvalue (f value)
+                        :value value}
+                       [0 1]))
+           (map (juxt :value :arc/active :pan)
+                (query (-> (s "bd cp")
+                           (jux #(fast % 3)))
+                       [0 1]))))))
 
 (deftest euclidean-test
   (is (= [["cp" [0 1/8]]

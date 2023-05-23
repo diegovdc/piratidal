@@ -1,9 +1,9 @@
 
 (ns piratidal.playback
   (:require
+   [clojure.core.async :as async]
    [overtone.at-at :refer [now]]
    [overtone.music.time :refer [apply-at]]
-   [piratidal.api :refer :all]
    [piratidal.pattern :refer [query]]
    [piratidal.superdirt :as sd]
    [piratidal.utils :refer [cps->bpm]]
@@ -18,7 +18,7 @@
                              :tick-cycle-dur 1}))
 
 (defn get-event-onset-time
-  ;; TODO probably the logic can be improved
+  ;; TODO probably the logic can be improved, and maybe there are bugs in here
   "A sort of fancy way to calculate the event onset based on the current tick and the previous tick.
   This is done in order to better support dynamic changes in cps as well as tick frequency.
   NOTE: onset times are on milliseconds"
@@ -28,9 +28,8 @@
    tick-onset
    tick-cycle-point
    event-point]
-  (let [delta-ratio (/ (- event-point tick-cycle-point)
-                       tick-cycle-dur
-                       cps)
+  (let [tick-ratio (if (= 1 tick-cycle-dur) 1 (/ tick-cycle-dur cps))
+        delta-ratio (/ (- event-point tick-cycle-point) tick-ratio)
         delta-time* (- tick-onset previous-tick-onset)
         delta-time (if (zero? delta-time*) 1 delta-time*)]
     (+ tick-onset (* delta-ratio delta-time))))
@@ -55,16 +54,13 @@
   (* (/ 1000 cps) tick-cycle-dur))
 
 (defn on-tick [_]
-  (let [n (now)
-        {:keys [cps tick-cycle-dur elapsed-ms cycle]
+  (let [{:keys [cps tick-cycle-dur elapsed-ms cycle]
          :as ticker-state-data} @ticker-state
         tick-dur (get-tick-dur-ms cps tick-cycle-dur)
         next-cycle (+ cycle tick-cycle-dur)
-        events (mapcat (fn [[_k pattern]] (query pattern [cycle next-cycle]))
-                       @patterns)]
-    (println "T1" (- (now) n))
+        events (doall (mapcat (fn [[_k pattern]] (query pattern [cycle next-cycle]))
+                              @patterns))]
     (schedule-events! ticker-state-data events)
-    (println "T2" (- (now) n))
     (swap! ticker-state #(-> %
                              (assoc :previous-tick-onset-ms elapsed-ms
                                     :cycle next-cycle)
@@ -73,14 +69,15 @@
 (defn start-ticker
   "starts or updates the cycle"
   [new-cps]
-  (when-not (::cycle-tick @gp/refrains)
+  (if-not (:ticker @gp/refrains)
     (let [elapsed-ms (now)
           tick-cycle-dur (:tick-cycle-dur @ticker-state)]
       (swap! ticker-state assoc
              :cps new-cps
              :elapsed-ms elapsed-ms
              :previous-tick-onset-ms (- elapsed-ms (get-tick-dur-ms new-cps tick-cycle-dur))
-             :cycle 0)))
+             :cycle 0))
+    (swap! ticker-state assoc :cps new-cps))
   (sd/init)
   (gp/ref-rain
    :id :ticker
@@ -90,37 +87,3 @@
 
 (defn playing? []
   (boolean (:ticker @gp/refrains)))
-
-(comment
-  (start-ticker 1)
-  (gp/stop)
-  (p 1 (sound "[bd cp:2/2 hh]*2")
-     (rev)
-     (gain "{1 0.8 0.7}%4"))
-
-  (query (p 1 (sound "bd:2"))
-         [0 1])
-
-  (query (p 1 (sound "bd cp hh"))
-         [1/2 1])
-  (-> @ticker-state))
-
-(comment
-  (-> @patterns)
-  (reset! patterns {})
-  ;; TODO patternize inputs for most things
-  (p 1 (sound "[bd bd, hh(3, 8)]")
-     (gain "1 <0.5 0.9>")
-     (note "2 10 0"))
-  (p 1 (sound "[bd bd, hh(3, 8)]")
-     (gain "1 <0.5 0.9>")
-     (note "2 10 0"))
-  (p 2 (sound "~")
-     (gain "1 <0.5 0.9> 1")
-     (note "<<1 11> {7 9 10} 2> <1 2 8> <3 8 7>")))
-
-(comment
-  (partition 2 2 (range 0 10 1/2))
-  (macroexpand-1
-   '(d 1 "a b c"
-       (gain "1 <2 1> 3"))))

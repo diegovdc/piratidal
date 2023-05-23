@@ -8,7 +8,8 @@ Experimental Clojure port of [TidalCycles](https://github.com/tidalcycles/). Thi
 
 - [Piratidal](#piratidal)
   - [Installation](#installation)
-  - [Tidal Features](#tidal-features)
+  - [Usage](#usage)
+  - [(un)Implemented Features](#unimplemented-features)
     - [Parser](#parser)
     - [Tidal's API Implemented So Far](#tidals-api-implemented-so-far)
 
@@ -16,7 +17,7 @@ Experimental Clojure port of [TidalCycles](https://github.com/tidalcycles/). Thi
 
 ## Installation
 
-Piratidal requires the installation of Java, the `clojure-cli` and a suitable editor (one with a Clojure repl).
+Piratidal requires the installation of Java, the `clojure-cli` and a suitable editor (one with a Clojure repl). You will also need to download `SuperCollider` and install `SuperDirt`.
 
 - Java - If you don't already have Java installed I recommend [open-jdk](https://openjdk.org/).
 
@@ -24,13 +25,42 @@ Piratidal requires the installation of Java, the `clojure-cli` and a suitable ed
 
 - Editor - If you are new to Clojure a good place to start might be the [Calva](https://calva.io/getting-started/) VSCode plugin. However you can find many other options in the following link https://clojure.org/guides/editors or https://practical.li/clojure/clojure-editors/#clojure-aware-editors. If you just want to try `Piratidal` without an editor repl, you can simply start a repl with the `clojure-cli`.
   - If using the `clojure-cli`, navigate to the piratidal directory in a terminal, and call the `clojure` or the `clj` command.
+- SuperCollider - SuperCollider can be downloaded from here: https://supercollider.github.io/downloads. `SuperDirt` can be installed by following these instructions: [Linux](https://tidalcycles.org/docs/getting-started/linux_install/#superdirt-installation), [MacOs](https://tidalcycles.org/docs/getting-started/macos_install#superdirt), [Windows](https://tidalcycles.org/docs/getting-started/windows_install#superdirt)
 
-## Tidal Features
+## Usage
+
+Open SuperCollider and evaulate the following line of code:
+
+```supercollider
+SuperDirt.start
+```
+
+The start a Clojure repl by following the instructions of the plugin from your editor of choice or running the following line of code in your terminal (while inside the piratidal directory).
+
+```bash
+$ clj
+```
+
+Then in an editor file or your terminal repl evaluate the following:
+
+```clj
+(require '[piratidal.core :refer :all])
+
+(p 1 (-> (s "[bd cp/2 hh]")
+         (jux rev)))
+```
+
+You can also use the examples file at `dev/examples.cljc` to try other stuff out.
+
+The API that has been already implemented can be found in the `piratidal.core` namespace in the `def-main-and-control-patterns`, `def-pattern-transformations` and `import-vars` forms. If using the `->` (thread) macro, the API replicates very closely Tidal's own.
+
+## (un)Implemented Features
 
 ### Parser
 
 Most of the parser's functionality is already implemented. Notable missing things are the following:
 
+0. Elongation probably doesn't work 100%.
 1. Patterned operations such as `bd*<1 2>`. Operations missing this are fast, slow, euclidean rhythms, elongation, replication and degradation.
 2. The fastcat operator `.`.
 3. Variables
@@ -40,7 +70,7 @@ Most of the parser's functionality is already implemented. Notable missing thing
 
 - [x] amp
 - [x] begin
-- [x] cat
+- [x] cat - not yet exposed by the API
 - [x] degrade
 - [x] degradeBy
 - [x] euclid
@@ -51,7 +81,7 @@ Most of the parser's functionality is already implemented. Notable missing thing
 - [x] gain
 - [x] hush
 - [x] jux
-- [x] layer
+- [x] layer - not yet exposed by the API
 - [x] palindrome
 - [x] rev
 - [x] rot
@@ -64,7 +94,7 @@ Most of the parser's functionality is already implemented. Notable missing thing
 - [x] sometimesBy
 - [x] sparsity
 - [x] speed
-- [x] stack
+- [x] stack - not yet exposed by the API
 - [x] sustain
 - [x] unDegradeBy
 - [ ] accelerate

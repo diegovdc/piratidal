@@ -7,33 +7,12 @@
   For the implemetation of the pattern transformation functions see the `piratidal.pattern` namespace."
   (:refer-clojure :exclude [loop + * / - mod quot])
   (:require
-   [piratidal.math-operators :refer [* +]]
+
    [piratidal.parser :refer [maybe-parse-pattern parse-pattern
                              with-param-pattern]]
-   [piratidal.pattern :refer [query]]
+   [piratidal.pattern :refer [sometimes-by query]]
+   [piratidal.pattern :refer [apply-off-fn]]
    [piratidal.utils :refer [deep-assoc-value-type]]))
-
-;;;;;;;;;;;;;;;;;;;;;;;;
-;; Patterns and effects
-;;;;;;;;;;;;;;;;;;;;;;;;
-
-(declare s sound n note gain speed
-         ;; TODO what are lag, unit, loop , delta and offset... are they public from the user's perspective?
-         begin end length accelerate unit loop delta legato sustain amp channel pan
-         freq midinote octave lag offset cut orbit shape hcutoff hresonance bandf
-         bandq crush coarse cutoff attack release hold tremolorate tremolodepth
-         phaserrate phaserdepth tilt plat vowel delaytime delayfeedback delayAmp
-         delaySend lock size room dry leslie lrate lsize)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Patterns transformation functions
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; The function arguments are declared here as well. TODO tell cljkondo to autodeclare all these things for these macros
-(declare almost-always almost-never amount degrade degrade-by euclidean
-         f fast fastGap fs jux layer off often palindrome probability
-         pulses rarely rev rotation rotl rotr slow somecycles-by
-         sometimes somtimes-by speed steps superimpose undegrade-by)
 
 (defn main-pattern
   [value-type pat-str]
@@ -52,19 +31,33 @@
        :value pat
        :controls [ctl]})))
 
+(defn apply-f
+  [pattern-type params value]
+  (case pattern-type
+    :off (apply-off-fn (:f params) (:amount params) value)
+    :sometimes-by (sometimes-by (:f params) (:probability params) value)
+    ((:f params) value)))
+
+(defn pattern-params?
+  [pattern-type param-patterns]
+  (cond
+    (#{:off :sometimes-by} pattern-type) false
+    :else (seq param-patterns)))
+
 (defn pattern-fn [pattern-type params pat]
   (let [param-patterns (map (fn [[k v]] (maybe-parse-pattern v {:value-type k}))
                             ;;  do not include functions, which are passed as the `:f` or `:fs` param
-                            (dissoc params :f :fs))]
+                            (dissoc params :f :fs))
+        value (maybe-parse-pattern pat)]
 
     (cond-> {:pattern/type pattern-type
-             :value (maybe-parse-pattern pat)}
-      (seq param-patterns) (#(with-param-pattern param-patterns %))
-      (:f params) (assoc :f (:f params))
-      (:fs params) (assoc :fs (:fs params)))))
+             :value value}
+      (:f params) (assoc :fvalue (apply-f pattern-type params value))
+      (:fs params) (assoc :fs (:fs params))
+      (pattern-params? pattern-type param-patterns) (#(with-param-pattern param-patterns %)))))
 
 (defmacro def-main-and-control-patterns
-  [syms]
+  [& syms]
   (mapv (fn [sym]
           `(let [pattern-maker#
                  (fn ~sym
@@ -134,7 +127,7 @@
 
 ;; Aliases
 
-(def sound s)
+#_(def sound s)
 
 (comment
   (-> (sound "bd sn cp")

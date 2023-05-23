@@ -1,40 +1,35 @@
 (ns piratidal.core
+  (:refer-clojure :exclude [loop + - mod quot * /])
   (:require
    [piratidal.api
     :refer [def-main-and-control-patterns def-pattern-transformations]]
-   [piratidal.playback :as playback :refer [start-ticker ticker-state]]
-   [time-time.dynacan.players.gen-poly :as gp]))
+   [piratidal.math-operators :refer [def-pattern-ops]]
+   [piratidal.pattern]
+   [piratidal.playback :as playback :refer [start-ticker]]
+   [time-time.dynacan.players.gen-poly :as gp]
+   [potemkin :refer [import-vars]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Patterns and effects
 ;;;;;;;;;;;;;;;;;;;;;;;;
-
-(declare s sound n note gain speed
-         ;; TODO what are lag, unit, loop , delta and offset... are they public from the user's perspective?
-         begin end length accelerate unit loop delta legato sustain amp channel pan
-         freq midinote octave lag offset cut orbit shape hcutoff hresonance bandf
-         bandq crush coarse cutoff attack release hold tremolorate tremolodepth
-         phaserrate phaserdepth tilt plat vowel delaytime delayfeedback delayAmp
-         delaySend lock size room dry leslie lrate lsize crush)
+#_:clj-kondo/ignore
+(def-main-and-control-patterns ;; TODO what are lag, unit, loop , delta and offset... are they public from the user's perspective?
+  s n note gain speed sound
+  begin end length accelerate unit loop delta legato sustain amp channel pan
+  freq midinote octave lag offset cut orbit shape hcutoff hresonance bandf
+  bandq crush coarse cutoff attack release hold tremolorate tremolodepth
+  phaserrate phaserdepth tilt plat vowel delaytime delayfeedback delayAmp
+  delaySend lock size room dry leslie lrate lsize)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Patterns transformation functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ;; The function arguments are declared here as well. TODO tell cljkondo to autodeclare all these things for these macros
 (declare almost-always almost-never amount degrade degrade-by euclidean
          f fast fastGap fs jux layer off often palindrome probability
          pulses rarely rev rotation rotl rotr slow somecycles-by
          sometimes somtimes-by speed steps superimpose undegrade-by)
-
-(def-main-and-control-patterns
-  [s n note gain speed sound
-   begin end length accelerate unit loop delta legato sustain amp channel pan
-   freq midinote octave lag offset cut orbit shape hcutoff hresonance bandf
-   bandq crush coarse cutoff attack release hold tremolorate tremolodepth
-   phaserrate phaserdepth tilt plat vowel delaytime delayfeedback delayAmp
-   delaySend lock size room dry leslie lrate lsize])
-
+#_:clj-kondo/ignore
 (def-pattern-transformations
   [[slow [speed]]
    [fast [speed]]
@@ -44,12 +39,6 @@
    [rev []]
    [palindrome []]
    [somecycles-by [probability f]]
-   [somtimes-by [probability f]]
-   [sometimes [f]]
-   [almost-always [f]]
-   [often [f]]
-   [rarely [f]]
-   [almost-never [f]]
    [superimpose [f]]
    [off [amount f]]
    [degrade []]
@@ -61,45 +50,44 @@
    ;; TODO can stack, slowcat (and other cats)  be done here?
    ])
 
+(import-vars
+ [piratidal.pattern sometimes-by sometimes often rarely almost-always almost-never])
+
+#_:clj-kondo/ignore
+(def-pattern-ops * + - / mod quot)
+
 ;; Aliases
 #_:clj-kondo/ignore
 (def sound s)
 
-
-;; Patterns
-
-
 (defn init!
   "Start tick and OSC communication"
-  ([] (start-ticker 1))
-  ;; TODO
-  ([cps] (start-ticker cps)))
-
-(defmacro p
-  [id pattern & patterns]
-  `(let [pattern# (-> ~pattern ~@patterns)]
-     (when-not (playback/playing?)
-       (init!))
-     (swap! playback/patterns assoc ~id pattern#)
-     pattern#))
-
-(defn setcps
-  ;; FIXME
+  ([] (init! 1))
   ([cps]
-   #_(swap! ticker-state assoc :cps 2)
-   #_(start-ticker cps)))
+   (println "Initializing piratidal!")
+   (start-ticker cps)))
+
+(defn p
+  [id pattern]
+  (when-not (playback/playing?)
+    (init!))
+  (prn-str
+    ;; HACK to realize lazy stuff in the sequence
+   (swap! playback/patterns assoc id pattern))
+  [:pattern id])
 
 (defn hush []
-  (gp/stop))
+  (gp/stop)
+  (reset! playback/patterns {})
+  :hushing...)
+
+(defn setcps
+  ([cps]
+   (start-ticker cps)))
 
 (comment
-  (hush)
-  (init! 1)
-  (p 1 (sound "[bd cp/2 hh]*2")
-     (gain "{1 0.8 0.7}%4")
-     #_(fast 3)
-     #_(rarely #(-> % (fast 3) (delaytime 0.5)))
-     (crush "[2 3 4, 16]")
-     palindrome
-     #_(degrade-by 0.8)
-     #_(jux #(-> % #_(degrade-by 0.2) (fast 2)))))
+  ;; FIXME something is not quite right when changing cps
+  ;; Depends on the moment that the cps changes, probably it could
+  ;; be a good idea to set the cycle change until the next cycle starts
+  (setcps 1)
+  (setcps 2))

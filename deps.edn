@@ -2,7 +2,8 @@
         instaparse/instaparse {:mvn/version "1.4.12"}
         io.helins/interval {:mvn/version "1.0.0-beta0"}
         overtone/osc-clj  {:mvn/version "0.9.0"}
-        time-time/time-time {:local/root "/Users/diego/Music/code/time-tiem/"}}
+        io.github.diegovdc/time-tiem {:git/tag "v0.0.1" :git/sha "c41f36128461b8c02b3656a6b543ac67ad403c59"}
+        potemkin/potemkin {:mvn/version "0.4.6"}}
  :paths ["src" "test"]
  :test-paths ["test"]
  :aliases {:test {:extra-paths ["test"]

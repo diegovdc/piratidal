@@ -130,10 +130,11 @@
   "In case a pattern is a string or a parsed string"
   ([pat] (maybe-parse-pattern pat {}))
   ([pat opts]
-   (if (or (string? pat) (number? pat))
-     (parse-pattern pat opts)
-     pat)))
+   (cond
+     (string? pat) (parse-pattern pat opts)
+     ;; cast to double so that the parser doesn't think it's a slow operator
+     (number? pat) (parse-pattern (double pat) opts)
+     :else pat)))
 
 #_(parse-pattern "[bd hh cp]/2" {:value-type :sound})
 #_(parse-pattern "bd(3, 8, 2)" {:value-type :sound})
-

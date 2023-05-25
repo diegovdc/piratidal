@@ -1,0 +1,25 @@
+Attributions for Piratidal
+====================================
+
+[Optional project description or introduction]
+
+This project includes code or components from the following sources:
+
+1. Alex McLean and contributors
+   - Code: https://github.com/tidalcycles/Tidal/blob/1.9-dev/src/Sound/Tidal/Pattern.hs
+   - License: GNU GPL v3
+   - Code translated from Haskell to Clojure or used as reference.
+
+2. Alex McLean and contributors
+   - Code: https://github.com/tidalcycles/Tidal/blob/1.9-dev/src/Sound/Tidal/Time.hs
+   - License: GNU GPL v3
+   - Code translated from Haskell to Clojure or used as reference.
+
+3. Mackenzie Starr and Colin Robinson
+   - Code: https://github.com/overtone/overtone/blob/887a44bde87071ede41827950f4d3d4a602a1f9c/src/overtone/algo/euclidean_rhythm.clj
+   - License: MIT
+
+
+Please note that the above list may not exhaustive, and the codebase of Piratidal may contain additional code or components that require attribution. We are grateful to the original authors for their contributions to this project.
+
+If you have any questions or concerns about the attributions, please open an issue on the repository: https://github.com/diegovdc/piratidal

@@ -295,7 +295,34 @@ Expected:
                                                           {:pattern/type :atom, :value 3, :value/type :speed}]}]}]}
                       {:pattern/type :atom, :value :silence}
                       {:pattern/type :atom, :value "b"}]}
-             (transform-tree (parse-tidal "[a b]*[2 3] ~ b" :check-ambiguous? true))))))
+             (transform-tree (parse-tidal "[a b]*[2 3] ~ b" :check-ambiguous? true)))))
+    (testing "patterned slow"
+      (is (= {:pattern/type :fastcat
+              :len 3
+              :value [{:pattern/type :with-param-pattern
+                       :value {:pattern/type :slow, :value {:pattern/type :atom, :value "a"}}
+                       :pattern/params [{:pattern/type :slowcat
+                                         :len 2
+                                         :value [{:pattern/type :atom, :value 2, :value/type :speed}
+                                                 {:pattern/type :atom, :value 3, :value/type :speed}]}]}
+                      {:pattern/type :atom, :value :silence}
+                      {:pattern/type :atom, :value "b"}]}
+             (transform-tree (parse-tidal "a/<2 3> ~ b" :check-ambiguous? true))))
+      (is (= {:pattern/type :fastcat
+              :len 3
+              :value [{:pattern/type :with-param-pattern
+                       :value {:pattern/type :slow, :value {:pattern/type :atom, :value "a"}}
+                       :pattern/params [{:pattern/type :stack
+                                         :value [{:pattern/type :slowcat
+                                                  :len 1
+                                                  :value [{:pattern/type :atom, :value 2, :value/type :speed}]}
+                                                 {:pattern/type :slowcat
+                                                  :len 1
+                                                  :value
+                                                  [{:pattern/type :atom, :value 3, :value/type :speed}]}]}]}
+                      {:pattern/type :atom, :value :silence}
+                      {:pattern/type :atom, :value "b"}]}
+             (transform-tree (parse-tidal "a/<2, 3> ~ b" :check-ambiguous? true))))))
   (testing "`:group` [a b]}"
     (is (= {:pattern/type :fastcat
             :len 2

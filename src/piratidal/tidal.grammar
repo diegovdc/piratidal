@@ -4,8 +4,8 @@ pattern = fastcat (<ws> <'.'> <ws> fastcat)*
 (* Basic types *)
 ws = #"\s+"
 word = #"[a-zA-Z]([a-zA-Z0-9]*)"
-int = #"[0-9]+"
-float = (!'?' #"\d+(\.\d+)")
+int = #"-?[0-9]+"
+float = #"(-?)\d+(\.\d+)"
 silence = "~"
 <comma> =  <ws? ',' ws?>
 <token> = word | sample | int | float | silence | fast | group | slowcat | slow | polymeter | elongate | replicate | euclidean | choose | degrade
@@ -13,10 +13,10 @@ silence = "~"
 (* Pattern structures *)
 fastcat = token (<ws>? token)*
 stack = pattern (comma pattern)*
-group = <#'\['> stack <#'\]'>
+group = <#'\['><ws>? stack <ws>?<#'\]'>
 slowcat-token = token (<ws>? token)*
-slowcat = <#'\<'> slowcat-token (comma slowcat-token)* <#'\>'>
-polymeter = <#'\{'> stack <#'\}'> polymeter-steps?
+slowcat = <#'\<'><ws>? slowcat-token (comma slowcat-token)* <ws>?<#'\>'>
+polymeter = <#'\{'><ws>? stack <ws>?<#'\}'> polymeter-steps?
 polymeter-steps = <'%'> int
 
 (* Pattern Operations *)

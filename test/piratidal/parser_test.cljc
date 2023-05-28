@@ -5,9 +5,13 @@
 
 (deftest parse-tidal-test
   (testing
-   (testing "Basic pattern"
-     (is (= [:pattern [:fastcat [:word "a"] [:silence "~"] [:word "b"]]]
-            (parse-tidal "a ~ b" :check-ambiguous? true))))
+   (testing "Numbers"
+     (is (= [:pattern
+             [:fastcat [:int "1"] [:float "1.2"] [:int "-1"] [:float "-0.8"]]]
+            (parse-tidal "1 1.2 -1 -0.8" :check-ambiguous? true))))
+    (testing "Basic pattern"
+      (is (= [:pattern [:fastcat [:word "a"] [:silence "~"] [:word "b"]]]
+             (parse-tidal "a ~ b" :check-ambiguous? true))))
     (testing "Basic pattern with `x!2`"
       (is (= [:pattern
               [:fastcat [:replicate [:word "a"] [:op-replicate [:int "2"]]] [:silence "~"] [:word "b"]]]
@@ -179,7 +183,7 @@
 bd@ bd?0.5
    ^
 Expected:
-#\"[0-9]+\"\n\n"
+#\"-?[0-9]+\"\n\n"
                (with-out-str (parse-tidal "bd@ bd?0.5" :check-ambiguous? true))))))))
 
 (deftest transform-tree-test

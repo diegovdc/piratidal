@@ -484,4 +484,23 @@ Expected:
                       :pattern/params [{:pattern/type :atom, :value 3, :value/type :pulses}
                                        {:pattern/type :atom, :value 8, :value/type :steps}
                                        {:pattern/type :atom, :value 1, :value/type :rotation}]}]}
-            (transform-tree (parse-tidal "bd(3, 8, 1)" :check-ambiguous? true))))))
+            (transform-tree (parse-tidal "bd(3, 8, 1)" :check-ambiguous? true))))
+    (is (=  {:pattern/type :fastcat
+             :len 1
+             :value [{:pattern/type :with-param-pattern
+                      :value {:pattern/type :euclidean
+                              :value {:pattern/type :atom, :value "bd"}}
+                      :pattern/params [{:pattern/type :slowcat
+                                        :len 2
+                                        :value [{:pattern/type :atom, :value 3, :value/type :pulses}
+                                                {:pattern/type :atom, :value 4, :value/type :pulses}]}
+                                       {:pattern/type :slowcat
+                                        :len 2
+                                        :value [{:pattern/type :atom, :value 8, :value/type :steps}
+                                                {:pattern/type :atom, :value 16, :value/type :steps}]}
+                                       {:pattern/type :slowcat
+                                        :len 3
+                                        :value [{:pattern/type :atom, :value 0, :value/type :rotation}
+                                                {:pattern/type :atom, :value 1, :value/type :rotation}
+                                                {:pattern/type :atom, :value 2, :value/type :rotation}]}]}]}
+            (transform-tree (parse-tidal "bd(<3 4>, <8 16>, <0 1 2>)" :check-ambiguous? true))))))

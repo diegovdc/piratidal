@@ -245,6 +245,25 @@ Expected:
              {:pattern/type :atom, :value "b"}]}
            (transform-tree (parse-tidal "a*<2, 3> ~ b" :check-ambiguous? true))))
     (is (= {:pattern/type :fastcat
+            :len 4
+            :value [{:pattern/type :with-param-pattern
+                     :value
+                     {:pattern/type :fast, :value {:pattern/type :atom, :value "a"}}
+                     :pattern/params [{:pattern/type :slowcat
+                                       :len 2
+                                       :value [{:pattern/type :atom, :value 2, :value/type :speed}
+                                               {:pattern/type :atom, :value 3, :value/type :speed}]}]}
+                    {:pattern/type :with-param-pattern
+                     :value {:pattern/type :fast, :value {:pattern/type :atom, :value "a"}}
+                     :pattern/params [{:pattern/type :slowcat
+                                       :len 2
+                                       :value
+                                       [{:pattern/type :atom, :value 2, :value/type :speed}
+                                        {:pattern/type :atom, :value 3, :value/type :speed}]}]}
+                    {:pattern/type :atom, :value :silence}
+                    {:pattern/type :atom, :value "b"}]}
+           (transform-tree (parse-tidal "a*<2 3>!2 ~ b" :check-ambiguous? true))))
+    (is (= {:pattern/type :fastcat
             :len 3
             :value
             [{:pattern/type :with-param-pattern

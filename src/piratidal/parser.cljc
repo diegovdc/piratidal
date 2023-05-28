@@ -67,7 +67,6 @@
      {:pattern identity
        ;; TODO rename :cat, should be :fastcat
       :fastcat make-fastcat
-
       :word (fn [x] (make-atom x value-type))
       :sample (fn [& [value [_ n]]]
                 (with-param-pattern
@@ -78,8 +77,7 @@
              (make-atom (int (edn/read-string int-str)) value-type))
       :float (fn [float-str]
                (make-atom (rationalize (edn/read-string float-str)) value-type))
-      :degrade-amount (fn [float-str]
-                        (make-atom (rationalize (edn/read-string float-str)) value-type))
+      :degrade-amount identity
       :silence (fn [_] (make-atom :silence value-type))
       :group identity
       :stack (fn [& xs] {:pattern/type :stack :value (into [] xs)})
@@ -127,7 +125,7 @@
                      {:pattern/type :euclidean
                       :value value}))}
      parse-tree))
-  (transform-tree (parse-tidal "a*<2 3>!2 ~ b" :check-ambiguous? true)))
+  (transform-tree (parse-tidal "bd bd?0.1" :check-ambiguous? true)))
 
 (defn parse-pattern
   ([pat-str] (parse-pattern pat-str {}))

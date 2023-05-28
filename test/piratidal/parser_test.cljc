@@ -133,7 +133,9 @@
       (is (= [:pattern
               [:fastcat
                [:word "bd"]
-               [:degrade [:word "bd"] [:op-degrade [:degrade-amount "0.1"]]]]]
+               [:degrade
+                [:word "bd"]
+                [:op-degrade [:degrade-amount [:float "0.1"]]]]]]
              (parse-tidal "bd bd?0.1" :check-ambiguous? true))))
     (testing "`:op-elongate`"
       (is (= [:pattern
@@ -458,7 +460,19 @@ Expected:
                      :value {:pattern/type :degrade-by
                              :value {:pattern/type :atom, :value "bd"}}
                      :pattern/params [{:pattern/type :atom, :value 1/10, :value/type :probability}]}]}
-           (transform-tree (parse-tidal "bd bd?0.1" :check-ambiguous? true)))))
+           (transform-tree (parse-tidal "bd bd?0.1" :check-ambiguous? true))))
+    (is (= {:pattern/type :fastcat
+            :len 2
+            :value [{:pattern/type :atom, :value "bd"}
+                    {:pattern/type :with-param-pattern
+                     :value {:pattern/type :degrade-by
+                             :value {:pattern/type :atom, :value "bd"}}
+                     :pattern/params [{:pattern/type :slowcat
+                                       :len 2
+                                       :value
+                                       [{:pattern/type :atom, :value 1/10, :value/type :probability}
+                                        {:pattern/type :atom, :value 4/5, :value/type :probability}]}]}]}
+           (transform-tree (parse-tidal "bd bd?<0.1 0.8>" :check-ambiguous? true)))))
   #_(testing "`:op-elongate`"
       (is (= [{:elongated {:word "bd"}, :size 2} {:word "bd"}]
              (transform-tree (parse-tidal "bd@2 bd" :check-ambiguous? true))))

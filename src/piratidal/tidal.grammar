@@ -22,6 +22,8 @@ polymeter-steps = <'%'> int
 (* Pattern Operations *)
 op-choose = <ws '|' ws>
 choose = <#'\['> stack (<op-choose> stack)+ <#'\]'>
+<op-pattern> = group | slowcat
+<op-value> = int | op-pattern
 op-replicate =  <'!'> int
 replicate = token op-replicate
 op-elongate =  <'@'> int
@@ -30,7 +32,7 @@ op-sample =  <':'> int
 sample = word op-sample
 op-euclidean = <'('> int comma int (comma int)? <')'>
 euclidean = (word | int | float | sample) op-euclidean
-op-fast = <'*'> int
+op-fast = <'*'> op-value
 fast = token op-fast
 op-slow = <'/'> int
 slow = token op-slow

@@ -57,7 +57,7 @@
   [parse-tree & {:keys [value-type]}]
   (insta-trans/transform
    {:pattern identity
-     ;; TODO rename :cat, should be :fastcat
+    ;; TODO rename :cat, should be :fastcat
     :fastcat make-fastcat
 
     :word (fn [x] (make-atom x value-type))
@@ -65,7 +65,7 @@
               (with-param-pattern
                 [(deep-assoc-value-type n :n)]
                 value))
-     ;; TODO These to below should parse into a :pattern/type :atom
+    ;; TODO These to below should parse into a :pattern/type :atom
     :int (fn [int-str]
            (make-atom (int (edn/read-string int-str)) value-type))
     :float (fn [float-str]

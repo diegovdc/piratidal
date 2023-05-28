@@ -19,7 +19,7 @@
   freq midinote octave lag offset cut orbit shape hcutoff hresonance bandf
   bandq crush coarse cutoff attack release hold tremolorate tremolodepth
   phaserrate phaserdepth tilt plat vowel delaytime delayfeedback delayAmp
-  delaySend lock size room dry leslie lrate lsize)
+  delaySend lock size room dry leslie lrate lsize scale2)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Patterns transformation functions

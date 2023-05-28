@@ -141,7 +141,8 @@
              (parse-tidal "bd@2 bd" :check-ambiguous? true))))
     (testing "`:op-sample`"
       (is (= [:pattern
-              [:fastcat [:sample [:word "bd"] [:op-sample [:int "2"]]]]]
+              [:fastcat
+               [:sample [:pattern [:fastcat [:word "bd"]]] [:op-sample [:int "2"]]]]]
              (parse-tidal "bd:2" :check-ambiguous? true))))
     (testing "`:op-euclidean`"
       (is (= [:pattern
@@ -154,7 +155,7 @@
       (is (= [:pattern
               [:fastcat
                [:euclidean
-                [:sample [:word "bd"] [:op-sample [:int "2"]]]
+                [:sample [:pattern [:fastcat [:word "bd"]]] [:op-sample [:int "2"]]]
                 [:op-euclidean [:int "3"] [:int "8"] [:int "1"]]]]]
              (parse-tidal "bd:2(3, 8, 1)" :check-ambiguous? true))))
     (testing "`:op-euclidean` + `:op-replicate`"
@@ -162,7 +163,9 @@
               [:fastcat
                [:replicate
                 [:euclidean
-                 [:sample [:word "bd"] [:op-sample [:int "2"]]]
+                 [:sample
+                  [:pattern [:fastcat [:word "bd"]]]
+                  [:op-sample [:int "2"]]]
                  [:op-euclidean [:int "3"] [:int "8"] [:int "1"]]]
                 [:op-replicate [:int "2"]]]]]
              (parse-tidal "bd:2(3, 8, 1)!2" :check-ambiguous? true))))
@@ -172,7 +175,9 @@
                [:elongate
                 [:replicate
                  [:euclidean
-                  [:sample [:word "bd"] [:op-sample [:int "2"]]]
+                  [:sample
+                   [:pattern [:fastcat [:word "bd"]]]
+                   [:op-sample [:int "2"]]]
                   [:op-euclidean [:int "3"] [:int "8"] [:int "1"]]]
                  [:op-replicate [:int "2"]]]
                 [:op-elongate [:int "2"]]]]]
@@ -463,9 +468,37 @@ Expected:
     (is (= {:pattern/type :fastcat
             :len 1
             :value [{:pattern/type :with-param-pattern
-                     :value {:pattern/type :atom, :value "bd"}
+                     :value {:pattern/type :fastcat
+                             :len 1
+                             :value [{:pattern/type :atom, :value "bd"}]}
                      :pattern/params [{:pattern/type :atom, :value 2, :value/type :n}]}]}
-           (transform-tree (parse-tidal "bd:2" :check-ambiguous? true)))))
+           (transform-tree (parse-tidal "bd:2" :check-ambiguous? true))))
+    (is (= {:pattern/type :fastcat
+            :len 1
+            :value [{:pattern/type :with-param-pattern
+                     :value {:pattern/type :fastcat
+                             :len 1
+                             :value [{:pattern/type :atom, :value "bd"}]}
+                     :pattern/params [{:pattern/type :slowcat
+                                       :len 2
+                                       :value [{:pattern/type :atom, :value 2, :value/type :n}
+                                               {:pattern/type :atom, :value 3, :value/type :n}]}]}]}
+           (transform-tree (parse-tidal "bd:<2 3>" :check-ambiguous? true))))
+    (is (= {:pattern/type :fastcat
+            :len 1
+            :value [{:pattern/type :with-param-pattern
+                     :value {:pattern/type :fastcat
+                             :len 1
+                             :value [{:pattern/type :slowcat
+                                      :len 3
+                                      :value [{:pattern/type :atom, :value "bd"}
+                                              {:pattern/type :atom, :value "bd"}
+                                              {:pattern/type :atom, :value "cp"}]}]}
+                     :pattern/params [{:pattern/type :slowcat
+                                       :len 2
+                                       :value [{:pattern/type :atom, :value 2, :value/type :n}
+                                               {:pattern/type :atom, :value 3, :value/type :n}]}]}]}
+           (transform-tree (parse-tidal "<bd bd cp>:<2 3>" :check-ambiguous? true)))))
   (testing "`:op-euclidean`"
     (is (= {:pattern/type :fastcat
             :len 1

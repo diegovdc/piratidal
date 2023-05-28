@@ -1,0 +1,5 @@
+{:skip-comments true
+ :linters {:clojure-lsp/unused-public-var {:exclude #{piratidal.core}}}
+ :lint-as {piratidal.api/def-main-and-control-patterns clojure.core/declare
+           piratidal.math-operators/def-pattern-ops clojure.core/declare}
+ :hooks {:analyze-call {piratidal.api/def-pattern-transformations hooks.macros/def-pattern-transformations}}}

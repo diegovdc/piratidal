@@ -10,8 +10,7 @@
 
    [piratidal.parser :refer [maybe-parse-pattern parse-pattern
                              with-param-pattern]]
-   [piratidal.pattern :refer [sometimes-by query]]
-   [piratidal.pattern :refer [apply-off-fn]]
+   [piratidal.pattern :refer [sometimes-by query apply-off-fn]]
    [piratidal.utils :refer [deep-assoc-value-type]]))
 
 (defn main-pattern
@@ -87,57 +86,7 @@
    '(def-pattern-transformations
       [[slow [speed]] [fast [speed]]])))
 
-;;;;;;;;;;;
-;; Generate the patterns and pattern transformation functions
-
-
-#_(def-main-and-control-patterns
-    [s n note gain speed sound
-     begin end length accelerate unit loop delta legato sustain amp channel pan
-     freq midinote octave lag offset cut orbit shape hcutoff hresonance bandf
-     bandq crush coarse cutoff attack release hold tremolorate tremolodepth
-     phaserrate phaserdepth tilt plat vowel delaytime delayfeedback delayAmp
-     delaySend lock size room dry leslie lrate lsize])
-
-#_(def-pattern-transformations
-    [[slow [speed]]
-     [fast [speed]]
-     [fastGap [speed]]
-     [rotl [amount]]
-     [rotr [amount]]
-     [rev []]
-     [palindrome []]
-     [somecycles-by [probability f]]
-     [somtimes-by [probability f]]
-     [sometimes [f]]
-     [almost-always [f]]
-     [often [f]]
-     [rarely [f]]
-     [almost-never [f]]
-     [superimpose [f]]
-     [off [amount f]]
-     [degrade []]
-     [degrade-by [probability]]
-     [undegrade-by [probability]]
-     [jux [f]]
-     [layer [fs]]
-     [euclidean [pulses steps rotation]]
-   ;; TODO can stack, slowcat (and other cats)  be done here?
-     ])
-
-;; Aliases
-
-#_(def sound s)
-
-(comment
-  (-> (sound "bd sn cp")
-      (gain "1 0.5")
-      (* n "1 2 3" "2")
-      palindrome
-      (slow 2)
-      (sometimes (fn [_] (-> (note "1 2") (gain "3"))))
-      (query [0 2])))
-
+#_:clj-kondo/ignore
 (comment
   ;; TODO convert to tests
   ;; possible operator notations

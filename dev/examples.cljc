@@ -8,6 +8,8 @@
   (p 1 (-> (s "[bd cp/2 hh]")
            (jux rev)))
 
+  (p 1 (-> (s "[bd cp hh]*<2 1>")))
+
   (p 1 (-> (sound "[bd*8, <~ hh(3, 8)>]")
            (n "3 4")
            (jux rev)

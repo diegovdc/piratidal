@@ -62,17 +62,17 @@
 
 (do
   (defn transform-tree
+    ;; TODO validate that patterned op only take ints and floats, but ensure that patterned sounds to take words
+    ;; TODO replicate and elongate still need work
     [parse-tree & {:keys [value-type]}]
     (insta-trans/transform
      {:pattern identity
-       ;; TODO rename :cat, should be :fastcat
       :fastcat make-fastcat
       :word (fn [x] (make-atom x value-type))
       :sample (fn [& [value [_ n]]]
                 (with-param-pattern
                   [(deep-assoc-value-type n :n)]
                   value))
-       ;; TODO These to below should parse into a :pattern/type :atom
       :int (fn [int-str]
              (make-atom (int (edn/read-string int-str)) value-type))
       :float (fn [float-str]
@@ -142,6 +142,3 @@
      ;; cast to double so that the parser doesn't think it's a slow operator
      (number? pat) (parse-pattern (double pat) opts)
      :else pat)))
-
-#_(parse-pattern "[bd hh cp]/2" {:value-type :sound})
-#_(parse-pattern "bd(3, 8, 2)" {:value-type :sound})

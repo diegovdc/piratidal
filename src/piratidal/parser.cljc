@@ -26,24 +26,26 @@
       (println (insta/get-failure parsed-data))
       parsed-data)))
 
+(defn make-cat-pattern [xs]
+  (reduce (fn [{:keys [len value]} pat]
+            (if (:elongated pat)
+              {:len (+ len (:pattern/ratio pat))
+               :value (assoc value len pat)}
+              {:len (inc len)
+               :value (assoc value len pat)}))
+
+          {:len 0 :value {}}
+          xs))
+
 (defn make-fastcat
   [& xs]
-  (let [value (reduce
-               (fn [acc pat]
-                 (cond
-                   (:replicate pat) (into acc (:replicate pat))
-                   :else (conj acc pat)))
-               []
-               xs)]
-    {:pattern/type :fastcat
-     ;; ::tag tag
-     :len (count value) ;; FIXME this must be more sofisticated
-     :value value}))
+  (let [value (make-cat-pattern xs)]
+    (merge {:pattern/type :fastcat}
+           value)))
 
 (defn make-slowcat [xs]
-  {:pattern/type :slowcat
-   :len (count xs) ;; TODO improve, need sofistication
-   :value xs})
+  (merge {:pattern/type :slowcat}
+         (make-cat-pattern xs)))
 
 (defn make-atom [x value-type]
   (cond-> {:pattern/type :atom :value x}
@@ -112,9 +114,8 @@
                         (make-atom 0.5 :probability))]
                    {:pattern/type :degrade-by
                     :value stack}))
-      :elongate (fn [& [pat [_ n]]]
-                  {:elongated pat
-                   :size n})
+      :elongate (fn [& [pat [_ ratio]]]
+                  {:elongated pat :pattern/ratio (:value ratio)})
       :euclidean (fn [& [value [_ pulses steps rotation]]]
                    (with-param-pattern
                      [(deep-assoc-value-type pulses :pulses)

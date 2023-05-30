@@ -14,6 +14,19 @@
          (query {:pattern/type :atom :value/type :sound :value "bd"}
                 [0 2]))))
 
+(deftest elongate-test
+  (is (= [{:value "bd", :value/type :s, :arc/whole [0 1], :arc/active [0 1]}
+          {:value "bd", :value/type :s, :arc/whole [1 2], :arc/active [1 2]}
+          {:value "bd", :value/type :s, :arc/whole [2 3], :arc/active [2 3]}
+          {:value "bd", :value/type :s, :arc/whole [3 4], :arc/active [3 4]}]
+         (query (s "bd@2") [0 4])))
+  (is (= [{:value "bd", :value/type :s, :arc/whole [0 2/3], :arc/active [0 2/3]}
+          {:value "cp", :value/type :s, :arc/whole [2/3 1], :arc/active [2/3 1]}]
+         (query (s "bd@2 cp") [0 1])))
+  (is (= [{:value "bd", :value/type :s, :arc/whole [0 2], :arc/active [0 2]}
+          {:value "cp", :value/type :s, :arc/whole [2 3], :arc/active [2 3]}]
+         (query (s "<bd@2 cp>") [0 3]))))
+
 (deftest fast-test
   (is (= [{:value/type :sound :value "bd", :arc/whole [0 1/6], :arc/active [0 1/6]}
           {:value/type :sound :value "hh", :arc/whole [1/6 1/3], :arc/active [1/6 1/3]}
@@ -549,14 +562,14 @@
                (query {:pattern/type :with-param-pattern
                        :pattern/params [{:pattern/type :fastcat
                                          :len 3
-                                         :value [{:pattern/type :atom :value 8 :value/type :steps}
-                                                 {:pattern/type :atom :value 10 :value/type :steps}
-                                                 {:pattern/type :atom :value 12 :value/type :steps}]}
+                                         :value {0 {:pattern/type :atom :value 8 :value/type :steps}
+                                                 1 {:pattern/type :atom :value 10 :value/type :steps}
+                                                 2 {:pattern/type :atom :value 12 :value/type :steps}}}
                                         {:pattern/type :slowcat
                                          :len 3
-                                         :value [{:pattern/type :atom :value 3 :value/type :pulses}
-                                                 {:pattern/type :atom :value 4 :value/type :pulses}
-                                                 {:pattern/type :atom :value 5 :value/type :pulses}]}
+                                         :value {0 {:pattern/type :atom :value 3 :value/type :pulses}
+                                                 1 {:pattern/type :atom :value 4 :value/type :pulses}
+                                                 2 {:pattern/type :atom :value 5 :value/type :pulses}}}
                                         {:pattern/type :atom :value 0 :value/type :rotation}]
                        :value {:pattern/type :euclidean
                                :value {:pattern/type :atom, :value "cp" :value/type :sound}}}

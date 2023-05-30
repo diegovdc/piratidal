@@ -28,12 +28,8 @@
 
 (defn make-cat-pattern [xs]
   (reduce (fn [{:keys [len value]} pat]
-            (if (:elongated pat)
-              {:len (+ len (:pattern/ratio pat))
-               :value (assoc value len pat)}
-              {:len (inc len)
-               :value (assoc value len pat)}))
-
+            {:len (+ len (:pattern/ratio pat 1))
+             :value (assoc value len pat)})
           {:len 0 :value {}}
           xs))
 
@@ -61,6 +57,11 @@
   {:pattern/type :with-param-pattern
    :value pattern
    :pattern/params params})
+
+(defn validate-operator-value
+  [pred error-msg atom-pat]
+  (when-not (pred (:value atom-pat))
+    (throw (ex-info error-msg {}))))
 
 (do
   (defn transform-tree
@@ -91,12 +92,18 @@
       :slowcat-token (fn [& xs] (vec xs))
       :fast (fn [x [_ speed]]
               (with-param-pattern
-                [(deep-assoc-value-type speed :speed)]
+                [(deep-assoc-value-type speed :speed
+                                        :validate-value-fn (partial validate-operator-value
+                                                                    number?
+                                                                    "Fast (*) value must be a number"))]
                 {:pattern/type :fast
                  :value x}))
       :slow (fn [x [_ speed]]
               (with-param-pattern
-                [(deep-assoc-value-type speed :speed)]
+                [(deep-assoc-value-type speed :speed
+                                        :validate-value-fn (partial validate-operator-value
+                                                                    number?
+                                                                    "Slow (*) value must be a number"))]
                 {:pattern/type :slow
                  :value x}))
       :replicate (fn [pat [_ times]]
@@ -104,25 +111,41 @@
       :polymeter (fn [& [stack [_ steps]]]
                    (let [value (->> stack :value (mapv :value))]
                      (with-param-pattern
-                       [(if steps (deep-assoc-value-type steps :len)
+                       [(if steps (deep-assoc-value-type steps :len
+                                                         :validate-value-fn (partial validate-operator-value
+                                                                                     int?
+                                                                                     "Polymeter (?) value must be an integer"))
                             (make-atom (apply max (map count value)) :len))]
                        {:pattern/type :polymeter
                         :value value})))
       :degrade (fn [& [stack [_ amount]]]
                  (with-param-pattern
-                   [(if amount (deep-assoc-value-type amount :probability)
+                   [(if amount (deep-assoc-value-type amount :probability
+                                                      :validate-value-fn (partial validate-operator-value
+                                                                                  number?
+                                                                                  "Degrade (?) value must be a number"))
                         (make-atom 0.5 :probability))]
                    {:pattern/type :degrade-by
                     :value stack}))
       :elongate (fn [& [pat [_ ratio]]]
-                  {:elongated pat :pattern/ratio (:value ratio)})
+                  (assoc pat :pattern/ratio (:value ratio)))
       :euclidean (fn [& [value [_ pulses steps rotation]]]
+                   ;; TODO extract validation to function
                    (with-param-pattern
-                     [(deep-assoc-value-type pulses :pulses)
-                      (deep-assoc-value-type steps :steps)
+                     [(deep-assoc-value-type pulses :pulses
+                                             :validate-value-fn (partial validate-operator-value
+                                                                         int?
+                                                                         "Euclidean values must be integers"))
+                      (deep-assoc-value-type steps :steps
+                                             :validate-value-fn (partial validate-operator-value
+                                                                         int?
+                                                                         "Euclidean values must be integers"))
                       (deep-assoc-value-type
                        (or rotation {:pattern/type :atom :value 0 :value/type :rotation})
-                       :rotation)]
+                       :rotation
+                       :validate-value-fn (partial validate-operator-value
+                                                   int?
+                                                   "Euclidean values must be integers"))]
                      {:pattern/type :euclidean
                       :value value}))}
      parse-tree))

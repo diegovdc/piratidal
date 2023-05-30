@@ -17,10 +17,12 @@
   (nth coll (mod index (count coll))))
 
 (defn deep-assoc-value-type
-  [ctl-pattern value-type]
+  [ctl-pattern value-type & {:keys [validate-value-fn]}]
   (walk/postwalk
    (fn [x] (if (= (:pattern/type x) :atom)
-             (assoc x :value/type value-type)
+             (do (when validate-value-fn
+                   (validate-value-fn x))
+                 (assoc x :value/type value-type))
              x))
    ctl-pattern))
 

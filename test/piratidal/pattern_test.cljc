@@ -15,17 +15,20 @@
                 [0 2]))))
 
 (deftest elongate-test
-  (is (= [{:value "bd", :value/type :s, :arc/whole [0 1], :arc/active [0 1]}
-          {:value "bd", :value/type :s, :arc/whole [1 2], :arc/active [1 2]}
-          {:value "bd", :value/type :s, :arc/whole [2 3], :arc/active [2 3]}
-          {:value "bd", :value/type :s, :arc/whole [3 4], :arc/active [3 4]}]
-         (query (s "bd@2") [0 4])))
-  (is (= [{:value "bd", :value/type :s, :arc/whole [0 2/3], :arc/active [0 2/3]}
-          {:value "cp", :value/type :s, :arc/whole [2/3 1], :arc/active [2/3 1]}]
-         (query (s "bd@2 cp") [0 1])))
-  (is (= [{:value "bd", :value/type :s, :arc/whole [0 2], :arc/active [0 2]}
-          {:value "cp", :value/type :s, :arc/whole [2 3], :arc/active [2 3]}]
-         (query (s "<bd@2 cp>") [0 3]))))
+  (is (= [["bd" [0 1] [0 1]]
+          ["bd" [1 2] [1 2]]
+          ["bd" [2 3] [2 3]]
+          ["bd" [3 4] [3 4]]]
+         (mapv (juxt :value :arc/whole :arc/active)
+               (query (s "bd@2") [0 4]))))
+  (is (= [["bd" [0 2/3] [0 2/3]]
+          ["cp" [2/3 1] [2/3 1]]]
+         (mapv (juxt :value :arc/whole :arc/active)
+               (query (s "bd@2 cp") [0 1]))))
+  (is (= [["bd" [0 2] [0 2]]
+          ["cp" [2 3] [2 3]]]
+         (mapv (juxt :value :arc/whole :arc/active)
+               (query (s "<bd@2 cp>") [0 3])))))
 
 (deftest fast-test
   (is (= [{:value/type :sound :value "bd", :arc/whole [0 1/6], :arc/active [0 1/6]}
@@ -543,7 +546,44 @@
                                                   {:pattern/type :atom, :value "A" :value/type :sound}]}
                                          {:pattern/type :atom, :value "b" :value/type :sound}
                                          {:pattern/type :atom, :value "c" :value/type :sound}]]}
-                               [0 2]))))))
+                               [0 2])))))
+  (is (= [["hh" [0 1/3]]
+          ["cp" [1/3 2/3]]
+          ["hh" [2/3 1]]
+          ["hh" [1 3/2]]
+          ["cp" [3/2 2]]]
+         (mapv (juxt :value :arc/active)
+               (sort-by (comp first :arc/active)
+                        (query
+                         {:pattern/type :with-param-pattern
+                          :pattern/params [{:pattern/type :slowcat
+                                            :len 2
+                                            :value {0 {:pattern/type :atom :value 3 :value/type :len}
+                                                    1 {:pattern/type :atom :value 2 :value/type :len}}}]
+                          :value {:pattern/type :polymeter
+                                  :value [[{:pattern/type :atom, :value "hh" :value/type :sound}
+                                           {:pattern/type :atom, :value "cp" :value/type :sound}]]}}
+                         [0 2])))))
+  (is (= [["hh" [0 1/3]]
+          ["cp" [1/3 2/3]]
+          ["hh" [2/3 1]]
+          ["cp" [1 4/3]]
+          ["hh" [4/3 5/3]]
+          ["cp" [5/3 2]]
+          ["hh" [2 5/2]]
+          ["cp" [5/2 3]]]
+         (mapv (juxt :value :arc/active)
+               (sort-by (comp first :arc/active)
+                        (query
+                         {:pattern/type :with-param-pattern
+                          :pattern/params [{:pattern/type :slowcat
+                                            :len 3
+                                            :value {0 {:pattern/type :atom :value 3 :value/type :len :pattern/ratio 2}
+                                                    2 {:pattern/type :atom :value 2 :value/type :len}}}]
+                          :value {:pattern/type :polymeter
+                                  :value [[{:pattern/type :atom, :value "hh" :value/type :sound}
+                                           {:pattern/type :atom, :value "cp" :value/type :sound}]]}}
+                         [0 3]))))))
 
 (deftest with-param-pattern-test
   (is (= [["cp" [0 1/8] nil]

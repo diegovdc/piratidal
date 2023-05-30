@@ -213,9 +213,8 @@ Expected:
   (testing "elongated"
     (is (= {:pattern/type :fastcat
             :len 3
-            :value
-            {0 {:pattern/type :atom, :value "bd"}
-             1 {:elongated {:pattern/type :atom, :value "cp"}, :pattern/ratio 2}}}
+            :value {0 {:pattern/type :atom, :value "bd"}
+                    1 {:pattern/type :atom, :value "cp", :pattern/ratio 2}}}
            (transform-tree (parse-tidal "bd cp@2" :check-ambiguous? true)))))
 
   (testing "Basic pattern with `x*2`"
@@ -248,6 +247,9 @@ Expected:
                1 {:pattern/type :atom, :value :silence}
                2 {:pattern/type :atom, :value "b"}}}
              (transform-tree (parse-tidal "a*<2 3> ~ b" :check-ambiguous? true))))
+      (is (= "Fast (*) value must be a number"
+             (try (transform-tree (parse-tidal "a*<2 3 bd> ~ b" :check-ambiguous? true))
+                  (catch Exception e (.getMessage e)))))
       (is (= {:pattern/type :fastcat
               :len 3
               :value
@@ -480,6 +482,10 @@ Expected:
                 :pattern/params
                 [{:pattern/type :atom, :value 3, :value/type :len}]}}}
            (transform-tree (parse-tidal "bd {bd hh sn}" :check-ambiguous? true)))))
+  #_(testing "validate pattern"
+      (is (= "Degrade (?) value must be a number"
+             (try (transform-tree (parse-tidal "bd {bd hh sn}%<1>" :check-ambiguous? true))
+                  (catch Exception e (.getMessage e))))))
   (testing "stacked `:polymeter`s {a b c, d e}"
     (is (= {:pattern/type :fastcat
             :len 2
@@ -542,7 +548,11 @@ Expected:
                                   :len 2
                                   :value {0 {:pattern/type :atom, :value 1/10, :value/type :probability}
                                           1 {:pattern/type :atom, :value 4/5, :value/type :probability}}}]}}}
-           (transform-tree (parse-tidal "bd bd?<0.1 0.8>" :check-ambiguous? true)))))
+           (transform-tree (parse-tidal "bd bd?<0.1 0.8>" :check-ambiguous? true))))
+    (testing "validate pattern value"
+      (is (= "Degrade (?) value must be a number"
+             (try (transform-tree (parse-tidal "bd bd?<0.1 0.8 bd>" :check-ambiguous? true))
+                  (catch Exception e (.getMessage e)))))))
   #_(testing "`:op-elongate`"
       (is (= [{:elongated {:word "bd"}, :size 2} {:word "bd"}]
              (transform-tree (parse-tidal "bd@2 bd" :check-ambiguous? true))))
@@ -624,4 +634,7 @@ Expected:
                                         :value {0 {:pattern/type :atom, :value 0, :value/type :rotation}
                                                 1 {:pattern/type :atom, :value 1, :value/type :rotation}
                                                 2 {:pattern/type :atom, :value 2, :value/type :rotation}}}]}}}
-            (transform-tree (parse-tidal "bd(<3 4>, <8 16>, <0 1 2>)" :check-ambiguous? true))))))
+            (transform-tree (parse-tidal "bd(<3 4>, <8 16>, <0 1 2>)" :check-ambiguous? true))))
+    (is (= "Euclidean values must be integers"
+           (try (transform-tree (parse-tidal "bd(<3 4 bd>, <8 16>, <0 1 2>)" :check-ambiguous? true))
+                (catch Exception e (.getMessage e)))))))

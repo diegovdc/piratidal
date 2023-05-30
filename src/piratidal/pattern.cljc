@@ -90,12 +90,6 @@
   ;; TODO
   )
 
-(defn- get-slowcat-event-value-and-ratio
-  [value]
-  (cond
-    (:elongated value) ((juxt :elongated :pattern/ratio) value)
-    :else [value 1]))
-
 (defn- slowcat-update-arc
   [event start* cycle ratio arc-k]
   (update event arc-k
@@ -116,7 +110,8 @@
            events []]
       (let [i (mod start* len)
             cycle (quot start* len)
-            [value* ratio] (get-slowcat-event-value-and-ratio (value (int i)))
+            value* (value (int i))
+            ratio (:pattern/ratio value* 1)
             end* (+ ratio start*)
             new-events (if-not value*
                          events

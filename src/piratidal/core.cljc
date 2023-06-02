@@ -12,24 +12,18 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Patterns and effects
 ;;;;;;;;;;;;;;;;;;;;;;;;
-#_:clj-kondo/ignore
-(def-main-and-control-patterns ;; TODO what are lag, unit, loop , delta and offset... are they public from the user's perspective?
+(def-main-and-control-patterns
+  ;; TODO what are lag, unit, loop , delta and offset... are they public from the user's perspective?
   s n note gain speed sound
   begin end length accelerate unit loop delta legato sustain amp channel pan
   freq midinote octave lag offset cut orbit shape hcutoff hresonance bandf
   bandq crush coarse cutoff attack release hold tremolorate tremolodepth
   phaserrate phaserdepth tilt plat vowel delaytime delayfeedback delayAmp
-  delaySend lock size room dry leslie lrate lsize)
+  delaySend lock size room dry leslie lrate lsize scale2)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Patterns transformation functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; The function arguments are declared here as well. TODO tell cljkondo to autodeclare all these things for these macros
-(declare almost-always almost-never amount degrade degrade-by euclidean
-         f fast fastGap fs jux layer off often palindrome probability
-         pulses rarely rev rotation rotl rotr slow somecycles-by
-         sometimes somtimes-by speed steps superimpose undegrade-by)
-#_:clj-kondo/ignore
 (def-pattern-transformations
   [[slow [speed]]
    [fast [speed]]
@@ -51,13 +45,12 @@
    ])
 
 (import-vars
- [piratidal.pattern sometimes-by sometimes often rarely almost-always almost-never])
+ [piratidal.pattern
+  sometimes-by sometimes often rarely almost-always almost-never])
 
-#_:clj-kondo/ignore
 (def-pattern-ops * + - / mod quot)
 
 ;; Aliases
-#_:clj-kondo/ignore
 (def sound s)
 
 (defn init!
@@ -74,6 +67,9 @@
   (prn-str
     ;; HACK to realize lazy stuff in the sequence
    (swap! playback/patterns assoc id pattern))
+  #_(comment
+    ;; TODO This might work instead
+      (defn doall* [s] (dorun (tree-seq seqable? seq s)) s))
   [:pattern id])
 
 (defn hush []

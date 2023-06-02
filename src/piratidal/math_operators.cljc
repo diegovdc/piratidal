@@ -36,8 +36,6 @@
 (defmacro def-pattern-ops
   [& ops]
   (mapv (fn [op]
-                                        ;TODO for `/` it might be desirable to use a safe version of division to prevent runtime crashes
-
           `(do (defmulti ~op
                  #'op-dispatcher)
 

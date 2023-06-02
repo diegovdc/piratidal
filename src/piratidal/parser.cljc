@@ -26,17 +26,22 @@
       (println (insta/get-failure parsed-data))
       parsed-data)))
 
+(defn make-cat-pattern [xs]
+  (reduce (fn [{:keys [len value]} pat]
+            {:len (+ len (:pattern/ratio pat 1))
+             :value (assoc value len pat)})
+          {:len 0 :value {}}
+          xs))
+
 (defn make-fastcat
   [& xs]
-  {:pattern/type :fastcat
-   ;; ::tag tag
-   :len (count xs) ;; FIXME this must be more sofisticated
-   :value (into [] xs)})
+  (let [value (make-cat-pattern xs)]
+    (merge {:pattern/type :fastcat}
+           value)))
 
 (defn make-slowcat [xs]
-  {:pattern/type :slowcat
-   :len (count xs) ;; TODO improve, need sofistication
-   :value xs})
+  (merge {:pattern/type :slowcat}
+         (make-cat-pattern xs)))
 
 (defn make-atom [x value-type]
   (cond-> {:pattern/type :atom :value x}
@@ -53,72 +58,98 @@
    :value pattern
    :pattern/params params})
 
-(defn transform-tree
-  [parse-tree & {:keys [value-type]}]
-  (insta-trans/transform
-   {:pattern identity
-     ;; TODO rename :cat, should be :fastcat
-    :fastcat make-fastcat
+(defn validate-operator-value
+  [pred error-msg atom-pat]
+  (when-not (pred (:value atom-pat))
+    (throw (ex-info error-msg {}))))
 
-    :word (fn [x] (make-atom x value-type))
-    :sample (fn [& [value [_ n]]]
+(do
+  (defn transform-tree
+    ;; TODO validate that patterned op only take ints and floats, but ensure that patterned sounds to take words
+    ;; TODO replicate and elongate still need work
+    [parse-tree & {:keys [value-type]}]
+    (insta-trans/transform
+     {:pattern identity
+      :fastcat make-fastcat
+      :word (fn [x] (make-atom x value-type))
+      :sample (fn [& [value [_ n]]]
+                (with-param-pattern
+                  [(deep-assoc-value-type n :n)]
+                  value))
+      :int (fn [int-str]
+             (make-atom (int (edn/read-string int-str)) value-type))
+      :float (fn [float-str]
+               (make-atom (rationalize (edn/read-string float-str)) value-type))
+      :degrade-amount identity
+      :silence (fn [_] (make-atom :silence value-type))
+      :group identity
+      :stack (fn [& xs] {:pattern/type :stack :value (into [] xs)})
+      :slowcat (fn [& xs]
+                 (if (= 1 (count xs))
+                   (make-slowcat (first xs))
+                   {:pattern/type :stack
+                    :value (mapv make-slowcat xs)}))
+      :slowcat-token (fn [& xs] (vec xs))
+      :fast (fn [x [_ speed]]
               (with-param-pattern
-                [(deep-assoc-value-type n :n)]
-                value))
-     ;; TODO These to below should parse into a :pattern/type :atom
-    :int (fn [int-str]
-           (make-atom (int (edn/read-string int-str)) value-type))
-    :float (fn [float-str]
-             (make-atom (rationalize (edn/read-string float-str)) value-type))
-    :degrade-amount (fn [float-str]
-                      (make-atom (rationalize (edn/read-string float-str)) value-type))
-    :silence (fn [_] (make-atom :silence value-type))
-    :group identity
-    :stack (fn [& xs] {:pattern/type :stack :value (into [] xs)})
-    :slowcat (fn [& xs]
-               (if (= 1 (count xs))
-                 (make-slowcat (first xs))
-                 {:pattern/type :stack
-                  :value (mapv make-slowcat xs)}))
-    :slowcat-token (fn [& xs] (vec xs))
-    :fast (fn [x [_ speed]]
-            (with-param-pattern
-              [(deep-assoc-value-type speed :speed)]
-              {:pattern/type :fast
-               :value x}))
-    :slow (fn [x [_ speed]]
-            (with-param-pattern
-              [(deep-assoc-value-type speed :speed)]
-              {:pattern/type :slow
-               :value x}))
-    :replicate (fn [pat [_ times]]
-                 {:replicate (repeat times pat)})
-    :polymeter (fn [& [stack [_ steps]]]
-                 (let [value (->> stack :value (mapv :value))]
-                   (with-param-pattern
-                     [(if steps (deep-assoc-value-type steps :len)
-                          (make-atom (apply max (map count value)) :len))]
-                     {:pattern/type :polymeter
-                      :value value})))
-    :degrade (fn [& [stack [_ amount]]]
-               (with-param-pattern
-                 [(if amount (deep-assoc-value-type amount :probability)
-                      (make-atom 0.5 :probability))]
-                 {:pattern/type :degrade-by
-                  :value stack}))
-    :elongate (fn [& [pat [_ n]]]
-                {:elongated pat
-                 :size n})
-    :euclidean (fn [& [value [_ pulses steps rotation]]]
+                [(deep-assoc-value-type speed :speed
+                                        :validate-value-fn (partial validate-operator-value
+                                                                    number?
+                                                                    "Fast (*) value must be a number"))]
+                {:pattern/type :fast
+                 :value x}))
+      :slow (fn [x [_ speed]]
+              (with-param-pattern
+                [(deep-assoc-value-type speed :speed
+                                        :validate-value-fn (partial validate-operator-value
+                                                                    number?
+                                                                    "Slow (*) value must be a number"))]
+                {:pattern/type :slow
+                 :value x}))
+      :replicate (fn [pat [_ times]]
+                   {:replicate (repeat (:value times) pat)})
+      :polymeter (fn [& [stack [_ steps]]]
+                   (let [value (->> stack :value (mapv :value))]
+                     (with-param-pattern
+                       [(if steps (deep-assoc-value-type steps :len
+                                                         :validate-value-fn (partial validate-operator-value
+                                                                                     int?
+                                                                                     "Polymeter (?) value must be an integer"))
+                            (make-atom (apply max (map count value)) :len))]
+                       {:pattern/type :polymeter
+                        :value value})))
+      :degrade (fn [& [stack [_ amount]]]
                  (with-param-pattern
-                   [(deep-assoc-value-type pulses :pulses)
-                    (deep-assoc-value-type steps :steps)
-                    (deep-assoc-value-type
-                     (or rotation {:pattern/type :atom :value 0 :value/type :rotation})
-                     :rotation)]
-                   {:pattern/type :euclidean
-                    :value value}))}
-   parse-tree))
+                   [(if amount (deep-assoc-value-type amount :probability
+                                                      :validate-value-fn (partial validate-operator-value
+                                                                                  number?
+                                                                                  "Degrade (?) value must be a number"))
+                        (make-atom 0.5 :probability))]
+                   {:pattern/type :degrade-by
+                    :value stack}))
+      :elongate (fn [& [pat [_ ratio]]]
+                  (assoc pat :pattern/ratio (:value ratio)))
+      :euclidean (fn [& [value [_ pulses steps rotation]]]
+                   ;; TODO extract validation to function
+                   (with-param-pattern
+                     [(deep-assoc-value-type pulses :pulses
+                                             :validate-value-fn (partial validate-operator-value
+                                                                         int?
+                                                                         "Euclidean values must be integers"))
+                      (deep-assoc-value-type steps :steps
+                                             :validate-value-fn (partial validate-operator-value
+                                                                         int?
+                                                                         "Euclidean values must be integers"))
+                      (deep-assoc-value-type
+                       (or rotation {:pattern/type :atom :value 0 :value/type :rotation})
+                       :rotation
+                       :validate-value-fn (partial validate-operator-value
+                                                   int?
+                                                   "Euclidean values must be integers"))]
+                     {:pattern/type :euclidean
+                      :value value}))}
+     parse-tree))
+  (transform-tree (parse-tidal "bd bd?0.1" :check-ambiguous? true)))
 
 (defn parse-pattern
   ([pat-str] (parse-pattern pat-str {}))
@@ -135,6 +166,3 @@
      ;; cast to double so that the parser doesn't think it's a slow operator
      (number? pat) (parse-pattern (double pat) opts)
      :else pat)))
-
-#_(parse-pattern "[bd hh cp]/2" {:value-type :sound})
-#_(parse-pattern "bd(3, 8, 2)" {:value-type :sound})

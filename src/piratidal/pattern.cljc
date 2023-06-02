@@ -13,12 +13,12 @@
 
 (defmethod query :atom
   [data query-arc]
-  (map (fn [active]
-         (-> data
-             (dissoc :pattern/type)
-             (assoc :arc/whole [(sam (first active)) (next-sam (first active))]
-                    :arc/active active)))
-       (span-cycles query-arc)))
+  (mapv (fn [active]
+          (-> data
+              (dissoc :pattern/type)
+              (assoc :arc/whole [(sam (first active)) (next-sam (first active))]
+                     :arc/active active)))
+        (span-cycles query-arc)))
 
 (defmethod query :event
   ;; NOTE This might not be the best thing to do as an event is technically not a pattern
@@ -32,11 +32,11 @@
 (defn fast [{:keys [speed value]} query-arc]
   (-> value
       (with-query-time #(* % speed) query-arc)
-      (->> (map (fn [ev]
-                  (let [ev* (update-event-time ev #(/ % speed))]
-                    (if (<= (first query-arc) (first (:arc/active ev*)))
-                      ev*
-                      (assoc ev* :has-start? false))))))))
+      (->> (mapv (fn [ev]
+                   (let [ev* (update-event-time ev #(/ % speed))]
+                     (if (<= (first query-arc) (first (:arc/active ev*)))
+                       ev*
+                       (assoc ev* :has-start? false))))))))
 
 (defn slow [pattern-data query-arc]
   (fast (update pattern-data :speed #(/ 1 %))
@@ -54,7 +54,7 @@
 (defmethod query :with-param-pattern
   [{:keys [pattern/params value]} query-arc]
   (->> params
-       (map #(query % query-arc))
+       (mapv #(query % query-arc))
        (reduce (fn [apped-events new-events]
                  (apply-pat-to-pat-both + apped-events new-events)))
        (mapcat (fn [{:keys [arc/active] :as event}]
@@ -86,40 +86,43 @@
 
 (defmethod query :timecat
   [{:keys [value]} query-arc]
-  (let [total (apply + (map first value))])
+  (let [total (apply + (mapv first value))])
   ;; TODO
   )
-(defn slowcat
-  ;; TODO, test how this works when starting at spans different from 0 and perhaps a few cycles afterwards
-  ;; FIXME probably elongate still doesn't work as expected
-  [{:keys [value len]} query-arc]
 
+(defn- slowcat-update-arc
+  [event start* cycle ratio arc-k]
+  (update event arc-k
+          (fn [[s e]] [(+ s (- start* cycle))
+                       (+ e (dec ratio) (- start* cycle))])))
+
+(defn- slowcat-evaluate-onset-time
+  [{:as event [onset] :arc/active} start start*]
+  (let [has-start? (and (>= onset start) (>= onset start*))]
+    (if has-start?
+      event
+      (assoc event :has-start? false))))
+
+(defn slowcat
+  [{:keys [value len]} query-arc]
   (let [[start end] query-arc]
     (loop [start* (int start)
            events []]
       (let [i (mod start* len)
             cycle (quot start* len)
-            value* (wrap-nth value (int i))
-            ratio (:ratio value* 1)
+            value* (value (int i))
+            ratio (:pattern/ratio value* 1)
             end* (+ ratio start*)
-            update-arc (fn [arc-k] #(update % arc-k
-                                            (fn [[s e]] [(+ s (- start* cycle))
-                                                       ;; FIXME could improve because here the event ends before it should when ratio > 1
-                                                         (+ e (- start* cycle))])))
-            evaluate-onset-time (fn [{:as event
-                                      [onset] :arc/active}]
-                                  (let [has-start? (and (>= onset start)
-                                                        (>= onset start*))]
-                                    (if has-start?
-                                      event
-                                      (assoc event :has-start? false))))
-            new-events (concat
-                        events
-                        (->> (query value* [cycle (inc cycle)])
-                             (map (update-arc :arc/active))
-                              ;; FIXME this should be something else altogether
-                             (map (update-arc :arc/whole))
-                             (map evaluate-onset-time)))]
+            new-events (if-not value*
+                         events
+                         (into
+                          events
+                          (->> (query value* [cycle (inc cycle)])
+                               (mapv #(-> %
+                                          (slowcat-update-arc start* cycle ratio :arc/active)
+                                           ;; FIXME this should be something else altogether
+                                          (slowcat-update-arc start* cycle ratio :arc/whole)
+                                          (slowcat-evaluate-onset-time start start*))))))]
 
         (cond
           (>= start* end) events
@@ -138,7 +141,7 @@
 (defmethod query :fastcat
   [{:keys [len] :as data} query-arc]
   (let [pats (:value data)]
-    (fast {:speed (count pats)
+    (fast {:speed len
            :value {:pattern/type :slowcat
                    :len len
                    :value pats}}
@@ -148,6 +151,7 @@
   [data query-arc]
   (->> data :value
        (mapcat #(query % query-arc))
+       doall
        ;; sorting may not be necessary, but it makes testing easier
        #_(sort-by (comp first :arc/active))))
 
@@ -157,8 +161,8 @@
   (let [query-value (fn [arc index value*]
                       (query {:pattern/type :fastcat
                               :len len
-                              :value (map #(wrap-nth value* %)
-                                          (range index (+ len index)))}
+                              :value (mapv #(wrap-nth value* %)
+                                           (range index (+ len index)))}
                              arc))]
     (->> (split-cycles query-arc)
          (mapcat (fn [arc]
@@ -172,11 +176,11 @@
    query-arc]
   (query {:pattern/type :fastcat
           :len steps
-          :value (map (fn [pulse]
-                        (if (zero? pulse)
-                          {:pattern/type :atom, :value :silence :value/type :sound}
-                          value))
-                      (rotate (euclidean-rhythm pulses steps) rotation))}
+          :value (mapv (fn [pulse]
+                         (if (zero? pulse)
+                           {:pattern/type :atom, :value :silence :value/type :sound}
+                           value))
+                       (rotate (euclidean-rhythm pulses steps) rotation))}
          query-arc))
 
 (defmethod query :layer
@@ -190,7 +194,7 @@
   ;; TODO eventually remove this for a more general solution
   [{:keys [value pan]} query-arc]
   (->> (query value query-arc)
-       (map #(assoc % :pan pan))))
+       (mapv #(assoc % :pan pan))))
 
 (defmethod query :jux
   [{:keys [value fvalue]} query-arc]
@@ -290,7 +294,7 @@
   [{:keys [value amount]} query-arc]
   (-> value
       (with-query-time #(+ % amount) query-arc)
-      (->> (map (fn [ev] (update-event-time ev #(- % amount)))))))
+      (->> (mapv (fn [ev] (update-event-time ev #(- % amount)))))))
 
 (defmethod query :rotr
   [{:keys [amount] :as data} query-arc]
@@ -322,8 +326,8 @@
 (defmethod query :rev
   [{:keys [value]} query-arc]
   (mapcat (fn [query-arc*]
-            (reverse (map (partial rev-event (first query-arc*))
-                          (query value query-arc*))))
+            (reverse (mapv (partial rev-event (first query-arc*))
+                           (query value query-arc*))))
           (span-cycles query-arc)))
 
 (defn silence?
@@ -342,11 +346,11 @@
 (defn palindrome-cycles
   "Slow down the query-arc to repeat each cycle twice so that the odd one can be reversed"
   [query-arc]
-  (map (fn [cycle-arc]
-         (let [cycle (first cycle-arc)
-               start (int (/ cycle 2))]
-           {:cycle cycle :arc [start (inc start)]}))
-       (span-cycles query-arc)))
+  (mapv (fn [cycle-arc]
+          (let [cycle (first cycle-arc)
+                start (int (/ cycle 2))]
+            {:cycle cycle :arc [start (inc start)]}))
+        (span-cycles query-arc)))
 (do
   (defn transpose-back-palindrome-event
     [cycle ev]
@@ -393,7 +397,7 @@
 
 (defn control-pattern-query-single-cycle
   [{:keys [value controls]} query-arc]
-  (let [ctl-events-list (map #(query % query-arc) controls)
+  (let [ctl-events-list (mapv #(query % query-arc) controls)
         events (query value query-arc)]
     (reduce (fn [events ctl-events]
               (merge-pat-to-pat-left events ctl-events))

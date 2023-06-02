@@ -1,5 +1,7 @@
 .lsp/
 .cpcache/
-.clj-kondo/
 .nrepl-port
 .cider-repl-history
+.clj-kondo/*
+!.clj-kondo/hooks
+!.clj-kondo/config.edn

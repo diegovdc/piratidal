@@ -1,6 +1,8 @@
 (ns piratidal.superdirt
-  (:require [overtone.osc :as osc]
-            [piratidal.pattern :refer [silence?]]))
+  (:require
+   [overtone.osc :as osc]
+   [piratidal.harmony :refer [apply-scale2]]
+   [piratidal.pattern :refer [silence?]]))
 
 (defonce osc-client (atom nil))
 
@@ -15,14 +17,19 @@
 
   (defn value->super-dirt-args
     [value]
-    (into {} (map (fn [[k v]]
-                    (cond
-                      (string? v) [(name k) v]
-                      (int? v) [(name k) (int v)]
-                      :else [(name k) (float v)]))
-                  (-> value
-                      (dissoc :value :arc/active :arc/whole :pattern/type :value/type)
-                      (assoc (:value/type value) (:value value))))))
+    (let [value* (-> value
+                     (dissoc :value :arc/active :arc/whole :pattern/type :value/type)
+                     (assoc (:value/type value) (:value value))
+                     ;; we apply the scale2 information here, because this would account for all operations over `note`
+                     apply-scale2)]
+      (->> value*
+           (map (fn [[k v]]
+                  (cond
+                    (#{:s :scale2} k) [(name k) (str v)]
+                    (string? v) [(name k) v]
+                    (int? v) [(name k) (int v)]
+                    :else [(name k) (float v)])))
+           (into {}))))
 
   (value->super-dirt-args
    {:value/type :sound
